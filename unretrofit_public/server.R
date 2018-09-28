@@ -10,6 +10,7 @@ server <- function(input, output, session) {
 
     best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
     df = read.csv(inFile$datapath)
+    colnames(df)[colnames(df) == 'oat'] <- 'OAT'
     df = missing_cols_handler(best_cols, df)
     })
 
