@@ -987,8 +987,6 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info)
     post_output_df = post_output(post_df, bdbid_n, energy_n)
     post_output_df = post_col(post_output_df, n, energy_n)
 
-    print(post_output_df)
-
     if(area_info$flag_area)
     {
       post_output_df = post_gross(post_output_df, area_info$area, energy_n)
