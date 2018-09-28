@@ -12,6 +12,7 @@ ui <- fluidPage(
     fileInput("file6", "Choose CO2 EUI Ranking CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
     fileInput("file8", "Choose CO2e Breakdown CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
     fileInput("file3", "Choose Energy Breakdown CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
+    uiOutput("category"),
     uiOutput("first"),
     fluidRow(
         column(4, actionButton(inputId = "prevBin", label = "Previous")),
@@ -105,6 +106,7 @@ ui <- fluidPage(
             #    column(4, br(), tableOutput('breakdown_df')),
             #    column(6, tableOutput('elec_break_table'))
             #),
+            br(),
             h3('Energy Breakdown Plot'),
             tableOutput('elec_break_table'),
             fluidRow(
@@ -152,6 +154,7 @@ ui <- fluidPage(
             #    column(4, br(), tableOutput('breakdown_df2')),
             #    column(6, tableOutput('fuel_break_table'))
             #),
+            br(),
             h3('Energy Breakdown Plot'),
             tableOutput('fuel_break_table'),
             fluidRow(

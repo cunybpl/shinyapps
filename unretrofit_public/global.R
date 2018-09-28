@@ -383,8 +383,8 @@ co2_value_get <- function(breakdown_df, bdbid_n)
 
      site_emission = round(subset(breakdown_df$co2emissions_kg_sqft_site, breakdown_df$bdbid == bdbid_n), 2)
      source_emission = round(subset(breakdown_df$co2emissions_kg_sqft_source, breakdown_df$bdbid == bdbid_n), 2)
-     df = data.frame(Value = c(site_eui, site_emission, source_eui, source_emission))
-     rownames(df) = c('Site EUI', 'Site CO2e kg/sqft', 'Source EUI', 'Source CO2e kg/sqft')
+     df = data.frame(site_eui, site_emission, source_eui, source_emission)
+     colnames(df) = c('Site EUI', 'Site CO2e kg/sqft', 'Source EUI', 'Source CO2e kg/sqft')
      return(df)
   }else
   {
@@ -429,29 +429,38 @@ percent_figure0 <- function(x)
   return(q)
 }
 
-percent_get <- function(post_df, bdbid_n, energy)
-{
-  if (energy == 'Elec')
-    {
+percent_get <- function(post_df, bdbid_n, energy, model)
+{ 
+
+  if (energy == 'Elec' & model != '5P')
+  {
       cp_per = post_df$cooling_change_point_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
-  }else
+  }else if (energy == 'Fuel' & model != '5P')
   {
     cp_per = post_df$heating_change_point_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   }
-    
+  
   heat_sen_per = post_df$heating_sensitivity_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   cool_sen_per = post_df$cooling_sensitivity_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   base_per = post_df$baseload_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
 
+  if (model == '5P')
+  {
+    heat_cp_per = post_df$heating_change_point_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
+    cool_cp_per = post_df$cooling_change_point_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
+    return(c(base_per, cool_cp_per, heat_cp_per, heat_sen_per,cool_sen_per))
+  }
+
   return(c(base_per, cp_per, heat_sen_per, cool_sen_per))
 }
 
-numeric_get <- function(post_df, bdbid_n, energy)
-{ 
-  if (energy == 'Elec')
+numeric_get <- function(post_df, bdbid_n, energy, model)
+{  
+
+  if (energy == 'Elec' & model != '5P')
     {
       cp_per = post_df$cooling_change_point_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
-  }else
+  }else if (energy == 'Fuel' & model != '5P')
   {
     cp_per = post_df$heating_change_point_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   }
@@ -459,6 +468,15 @@ numeric_get <- function(post_df, bdbid_n, energy)
   heat_sen_per = post_df$heating_sensitivity_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   cool_sen_per = post_df$cooling_sensitivity_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   base_per = post_df$baseload_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
+
+  if (model == '5P')
+  {
+    cool_cp_per = post_df$cooling_change_point_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
+    heat_cp_per = post_df$heating_change_point_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
+
+    x = c(base_per, cool_cp_per, heat_cp_per, heat_sen_per,cool_sen_per)
+    return(numeric_post_table(x))
+  }
 
   x = c(base_per, cp_per, heat_sen_per, cool_sen_per)
   return(numeric_post_table(x)) 
@@ -468,18 +486,27 @@ numeric_post_table <- function(x)
 { 
   df = data.frame(t(x))
   row.names(df) = c('Numeric Ranking')
-  colnames(df) = c('Baseload', 'Change-point', 'Heating Sensitivity', 'Cooling Sensitivity')
+  if(length(x) == 4)
+  {
+    colnames(df) = c('Baseload', 'Change-point', 'Heating Sensitivity', 'Cooling Sensitivity')
+  }else
+  {
+    colnames(df) = c('Baseload', 'Cooling Change-point', 'Heating Change-point','Heating Sensitivity', 'Cooling Sensitivity')
+  }
   return(df)
 }
 
 per_num_func <- function(df, bdbid_n, energy)
 {
   if (flag_func(df, bdbid_n, energy))
-    {
-      percent_vec = percent_get(df, bdbid_n, energy)
+    { 
+      df = subset(df, df$bdbid == bdbid_n & df$energy_type == energy)
+      model = df$model_type
+     
+      percent_vec = percent_get(df, bdbid_n, energy, model)
       percent_fig = percent_figure(percent_vec)
 
-      numeric_df = numeric_get(df, bdbid_n, energy)
+      numeric_df = numeric_get(df, bdbid_n, energy, model)
     }else
     {
       percent_fig = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy, sep = " "))
@@ -932,7 +959,7 @@ energy_break_pie_chart <- function(df)
     layout(title = 'Site Energy Breakdown', showlegend = TRUE,
            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-  source_p <- add_pie(p = plot_ly(), data = df, labels = ~epa_energy_type, values = ~source_energy_kbtu, type = 'pie',
+  source_p <- add_pie(p = plot_ly(), data = df, labels = ~epa_energy_type, values = ~source_energy_kbtu, type = 'pie', textposition = 'outside', textinfo = 'percent', hoverinfo = 'text',
         marker = list(colors = df$color, line = list(color = '#FFFFFF', width = 1)), hole = 0.6,
         insidetextfont = list(color = '#FFFFFF')) %>%
     layout(title = 'Source Energy Breakdown', showlegend = TRUE,
@@ -945,6 +972,5 @@ make_break_table <- function(df)
 {
   df = df[, c('epa_energy_type','reported_consumption_unit', 'reported_site_energy', 'reported_source_energy')]
   colnames(df) = c('EPA Energy Type', 'Unit','Reported Site Energy', 'Reported Source Energy')
-  df = df[,c(1,3,4,2)]
   return(df)
 }

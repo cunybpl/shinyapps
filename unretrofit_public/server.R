@@ -10,11 +10,10 @@ server <- function(input, output, session) {
 
     best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
     df = read.csv(inFile$datapath)
-    colnames(df)[colnames(df) == 'oat'] <- 'OAT'
     df = missing_cols_handler(best_cols, df)
     })
 
-  temp_df <- reactive({
+  temp_df0 <- reactive({
     inFile2 <- input$file2
 
     if (is.null(inFile2))
@@ -22,8 +21,21 @@ server <- function(input, output, session) {
 
     util_cols = c("using_fuel_oil", "using_sqft")
     df = read.csv(inFile2$datapath)
+    colnames(df)[colnames(df) == 'oat'] <- 'OAT'
     df = missing_cols_handler(util_cols, df)
     })
+
+  temp_df <- reactive({
+    if(is.null(binfo_df()))
+    {
+      return(temp_df0())
+    }else
+    { 
+      df_binfo = subset(binfo_df(), binfo_df()$oper_agency_acronym == input$category)
+      utility = subset(temp_df0(), temp_df0()$bdbid %in% df_binfo$bdbid)
+      return(utility)
+    }
+  })
 
   binfo_df <- reactive({
     inFile7 <- input$file7
@@ -34,6 +46,12 @@ server <- function(input, output, session) {
     read.csv(inFile7$datapath)
     })
 
+  output$category <- renderUI({
+    tagList(
+      selectInput('category', 'Choose Category', unique(binfo_df()$oper_agency_acronym), selected = unique(binfo_df()$oper_agency_acronym)[1], multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
+
   post_df0 <- reactive({
     inFile5 <- input$file5
 
@@ -42,6 +60,7 @@ server <- function(input, output, session) {
 
     #post_cols = c("lean_category", "baseload_percent_rank", "heating_sensitivity_percent_rank", "cooling_sensitivity_percent_rank", "heating_change_point_percent_rank", "cooling_change_point_percent_rank", "baseload_numeric_rank", "heating_sensitivity_numeric_rank", "cooling_sensitivity_numeric_rank", "heating_change_point_numeric_rank", "cooling_change_point_numeric_rank", "session_id")
     df = read.csv(inFile5$datapath)
+    df = df[order(df[,'bdbid'], df[,'energy_type']),]
     #df = missing_cols_handler(post_cols, df)
     df
   })
@@ -52,7 +71,9 @@ server <- function(input, output, session) {
     if(is.null(inFile9))
       return(NULL)
 
-    read.csv(inFile9$datapath)
+    df = read.csv(inFile9$datapath)
+    df = df[order(df[,'bdbid'], df[,'energy_type']),]
+    df
     })
 
   post_df <- reactive({
@@ -62,7 +83,7 @@ server <- function(input, output, session) {
        df = missing_cols_handler(post_cols, post_df0())
        return(df)
     }else if(!is.null(lean_df()) & !is.null(post_df0()))
-    {
+    { 
       df = post_lean_rank_func(post_df0(), lean_df())
       post_cols = c("sitename", 'period', 'percent_cooling', 'percent_heating', 'percent_baseload', "average_use", "average_cool_val", "average_baseload_val", "average_heat_val", "session_id")
       df = missing_cols_handler(post_cols, df)
@@ -100,7 +121,6 @@ server <- function(input, output, session) {
 
     read.csv(inFile9$datapath)
     })
-
 
   b_df <- reactive({
     if(!is.null(binfo_df()))
@@ -188,7 +208,6 @@ server <- function(input, output, session) {
         post_output_df = post_output(post_df(), bdbid_n(), energy_n)
         post_output_df = post_col(post_output_df, n, energy_n)
 
-
         flag_area = check_sqft_na(binfo_output_list()$binfo_df2)
 
         if(!is.null(binfo_df()) & length(post_output_df) & flag_area)
@@ -258,7 +277,7 @@ server <- function(input, output, session) {
 
   output$breakdown_df <- renderTable({
     figure()$'Elec'$breakdown_table
-    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
   output$fuel_oil <- renderText({
     fuel_oil_message(figure()$'Elec'$fuel_oil_flag)
@@ -324,7 +343,7 @@ server <- function(input, output, session) {
 
   output$breakdown_df2 <- renderTable({
     figure()$'Fuel'$breakdown_table
-    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
   output$fuel_oil2 <- renderText({
     fuel_oil_message(figure()$'Fuel'$fuel_oil_flag)
