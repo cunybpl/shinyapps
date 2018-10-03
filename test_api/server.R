@@ -134,7 +134,10 @@ shinyServer(function(input, output, session) {
             hr(),
             h3("Elec Vs. Fuel", align = "center"),
             plotlyOutput('elec_fuel_plot')
-        )
+        ),
+        tabPanel('Building Comparison',
+          br(),
+          plotlyOutput('b_comp_plot'))
             )#main tab panel
           )))#main panle
         )
@@ -603,6 +606,10 @@ shinyServer(function(input, output, session) {
       return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('Only one energy type for', bdbid_n())))
     }
   })
+
+  output$b_comp_plot <- renderPlotly({
+    building_comparison_graph(breakdown_df(), b_df())
+    })
 
 
 })

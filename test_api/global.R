@@ -878,3 +878,19 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
     }
     return(post_output_df)
 }
+
+building_comparison_graph <- function(df, binfo)
+{ 
+  b_name = subset(binfo$name, binfo$bdbid %in% df$bdbid)
+  p_init = plot_ly()
+  p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$total_site_energy_kbtu, type ='scatter', mode ='markers', text = b_name, hoverinfo = 'x+y+text',
+    marker = list(symbol = 'circle', color = 'rgba(176,220,175,1)', size = 9), name = 'blah', inherit = FALSE) %>%
+  layout(title = 'Buliding Comparison',
+    xaxis = list(title = "Property Size (sqft)",
+                      showticklabels = TRUE,
+                      zeroline = TRUE),
+         yaxis = list(title = "EUI (kBTU/sqft)",
+                      showticklabels = TRUE,
+                      zeroline = TRUE))
+  return(p)
+}
