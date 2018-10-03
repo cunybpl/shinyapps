@@ -261,11 +261,11 @@ server <- function(input, output, session) {
 
   output$elec_params_df <- renderTable({
       params_table(best_model(), bdbid_n(), 'Elec')
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$elec_stat_df <- renderTable({
       stat_table(best_model(), bdbid_n(), 'Elec')
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$elec_post_df <- renderTable({
     if (!flag_func(post_df(), bdbid_n(), 'Elec'))
@@ -274,7 +274,7 @@ server <- function(input, output, session) {
     }
     n = ifelse(flag_func(best_model(), bdbid_n(), 'Elec'), subset(best_model()$n, best_model()$bdbid == bdbid_n() & best_model()$energy_type == 'Elec'), 0)
     post_output_df_server(post_df(), bdbid_n(), 'Elec', area_info(), n)
-  }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
+  }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
 
   #lean rank plot
   output$elec_lean_plot <- renderPlotly({per_num_list_elec()$percent_fig})
@@ -282,7 +282,7 @@ server <- function(input, output, session) {
   #lean rank table
   output$elec_numeric_lean_df <- renderTable({
       per_num_list_elec()$numeric_df
-  }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+  }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
 
   #co2_eui_lean plot
   output$elec_co2eui_lean_plot <- renderPlotly({
@@ -292,7 +292,7 @@ server <- function(input, output, session) {
   #co2e breakdown table
   output$elec_co2e_break_df <- renderTable({
     co2_break_df()
-    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
 
   output$elec_site_break <- renderPlotly({
     energy_break_plot()$site_p
@@ -304,7 +304,7 @@ server <- function(input, output, session) {
 
   output$elec_break_table <- renderTable({
     energy_break_plot()$break_table
-    }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
   #############################################
   ################# FUEL OUTPUT ###############
@@ -348,11 +348,11 @@ server <- function(input, output, session) {
 
   output$fuel_params_df <- renderTable({
       params_table(best_model(), bdbid_n(), 'Fuel')
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$fuel_stat_df <- renderTable({
       stat_table(best_model(), bdbid_n(), 'Fuel')
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$fuel_post_df <- renderTable({
     #figure()$'Elec'$post_output_df
@@ -362,7 +362,7 @@ server <- function(input, output, session) {
     }
     n = ifelse(flag_func(best_model(), bdbid_n(), 'Fuel'), subset(best_model()$n, best_model()$bdbid == bdbid_n() & best_model()$energy_type == 'Fuel'), 0)
     post_output_df_server(post_df(), bdbid_n(), 'Fuel', area_info(), n)
-  }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
+  }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
 
   #lean rank plot
   output$fuel_lean_plot <- renderPlotly({per_num_list_fuel()$percent_fig})
@@ -370,7 +370,7 @@ server <- function(input, output, session) {
   #lean rank table
   output$fuel_numeric_lean_df <- renderTable({
       per_num_list_elec()$numeric_df
-  }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+  }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
 
   #co2_eui_lean plot
   output$fuel_co2eui_lean_plot <- renderPlotly({
@@ -380,7 +380,7 @@ server <- function(input, output, session) {
   #co2e breakdown table
   output$fuel_co2e_break_df <- renderTable({
     co2_break_df()
-    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
 
   output$fuel_site_break <- renderPlotly({
     energy_break_plot()$site_p
@@ -391,7 +391,7 @@ server <- function(input, output, session) {
 
   output$fuel_break_table <- renderTable({
     energy_break_plot()$break_table
-    }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
   ############### Elec Vs Fuel ################
 
