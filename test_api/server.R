@@ -439,7 +439,7 @@ shinyServer(function(input, output, session) {
     if (flag_func(temp_df(), bdbid_n(), 'Elec'))
     { 
       util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Elec')
-      plot_timeseries_2(util, 'Elec')
+      plot_timeseries(util, 'Elec')
     }else
     {
       plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No usage points for Elec')
@@ -526,7 +526,7 @@ shinyServer(function(input, output, session) {
     if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
     { 
       util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Fuel')
-      plot_timeseries_2(util, 'Fuel')
+      plot_timeseries(util, 'Fuel')
     }else
     {
       plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No usage points for Fuel')

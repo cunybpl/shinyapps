@@ -122,39 +122,6 @@ params_matrix <- function(params_vec)
   return(B)
 }
 
-plot_timeseries <- function(util, energy)
-{ 
-
-  options(digits=15)
-  r1 = util$end_date[length(subset(util$end_date, util$prepost == 1))]
-  ay <- list(
-      tickfont = list(color = "red"),
-      overlaying = "y",
-      side = "right",
-      title = "OAT"
-  )
-  if (energy == 'Elec')
-  {
-    p <- plot_ly() %>%
-      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(51, 113, 213, 1)'), name = "Usage") %>%
-      add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
-      layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage'), margin = list(b = 100),
-      xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date)
-    )
-  }else
-  {
-    p <- plot_ly() %>%
-      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(240, 24, 28,1)'), name = "Usage") %>%
-      add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
-      layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage'), margin = list(b = 100),
-      xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date)
-    )
-  }
-
-    return(p)
-}
 
 post_output <- function(post_df,  bdbid_n, energy)
 {  
@@ -529,22 +496,26 @@ plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit = FALSE
 }
 
 
-plot_timeseries_2 <- function(util, energy)
+plot_timeseries <- function(util, energy)
 { 
   #plot timeseries. Unlike pplot_timeseries function, it also plots points and the shape of the points is now adjusted (Act or Est)
   options(digits=15)
   util$estimated = ifelse(util$estimated == 1, 'Est', 'Act')
+
+  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
 
   util_act = subset(util, util$estimated == 'Act')
   util_est = subset(util, util$estimated == 'Est')
 
   switch(energy, 'Elec' = {
     color_n = 'rgba(51, 113, 213, 1)'
-    y_title = 'Usage(kWh/sq/month)'
+    y_title = paste('Usage(kWh',unit_usage, sep ='')
+    #y_title = 'Usage(kWh/sq/month)'
     },
     'Fuel' = {
       color_n = 'rgba(240, 24, 28,1)'
-      y_title = 'Usage(BTU/sqft/month)'
+      y_title = paste('Usage(BTU',unit_usage, sep ='')
+      #y_title = 'Usage(BTU/sqft/month)'
       })
 
   ay <- list(
