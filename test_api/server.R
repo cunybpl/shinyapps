@@ -284,6 +284,8 @@ shinyServer(function(input, output, session) {
     if (length(df))
     {
       colnames(df)[colnames(df) == 'oat' | colnames(df) == 'OAT'] = 'OAT'
+      util_cols = c("using_sqft", "using_fuel_oil")
+      df = missing_cols_handler(util_cols, df)
       return(df)
     }else
     {

@@ -503,7 +503,7 @@ plot_timeseries <- function(util, energy)
   util$estimated = ifelse(util$estimated == 1, 'Est', 'Act')
 
   unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
-
+  
   util_act = subset(util, util$estimated == 'Act')
   util_est = subset(util, util$estimated == 'Est')
 
