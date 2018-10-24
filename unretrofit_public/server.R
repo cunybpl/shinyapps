@@ -23,6 +23,7 @@ server <- function(input, output, session) {
     df = read.csv(inFile2$datapath)
     colnames(df)[colnames(df) == 'oat'] <- 'OAT'
     df = missing_cols_handler(util_cols, df)
+    df = fixed_time(df)
     })
 
   temp_df <- reactive({

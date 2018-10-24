@@ -1,5 +1,5 @@
 library(plotly)
-
+library(lubridate)
 
 plot_model <- function(x, model, B, cp1, cp2, energy, unit, p1 = plot_ly())
 { 
@@ -849,4 +849,21 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
       post_output_df$Unretrofit = prettyNum(post_output_df$Unretrofit, big.mark = ",", format = 'f')
     }
     return(post_output_df)
+}
+
+fixed_time <- function(util)
+{ 
+  if(!is.POSIXlt(util$end_date) & !is.POSIXt(util$end_date) & !is.POSIXct(util$end_date))
+  { 
+    if (grepl('/', util$end_date[1]))
+    {
+      util$end_date = strptime(util$end_date, format = "%m/%d/%Y")
+    }else
+    {
+      util$end_date = strptime(util$end_date, format = "%Y-%m-%d")
+    }
+  }
+
+  util$end_date = as.factor(util$end_date)
+  return(util)
 }
