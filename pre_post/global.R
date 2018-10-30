@@ -550,7 +550,7 @@ construct_saving_table <- function(saving_df, energy, bdbid_n, type_flag)
 
   moe = unc_sav*total_sav
 
-  df = data.frame(per_sav*100, total_sav, moe, unc_sav)
+  df = data.frame(per_sav*100, total_sav, moe, unc_sav*100)
   colnames(df) = c('Percent Savings','Total Savings', 'Margin of Error', 'Percent Saving Uncertainty')
   return(df)
 }
