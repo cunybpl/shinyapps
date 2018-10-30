@@ -527,38 +527,30 @@ missing_cols_handler <- function(cols, df)
   return(df)
 }
 
-total_usage_calc <- function(df, type_flag)
-{
-  name = paste(type_flag, 'usage', sep = '_')
-  if (type_flag == 'normalized_usage')
-  {
-    df = subset(df, df$prepost == 1)
-  }
-  print(df)
-  df = df[name][!is.na(df[name])]
-  print(df)
-  sum(df)
-}
-
-construct_saving_table <- function(saving_df, util, energy, type_flag)
+construct_saving_table <- function(saving_df, energy, bdbid_n, type_flag)
 { 
   if(is.null(saving_df))
   {
     return(NULL)
   }
 
-  saving_df = subset(saving_df, saving_df$energy_type == energy)
-  total_usage = total_usage_calc(util, type_flag)
+  name = paste(type_flag, 'percent_savings', sep = '_')
+  saving_df = subset(saving_df, saving_df$energy_type == energy & saving_df$bdbid == bdbid_n)
   unc_sav_col = paste(type_flag, 'percent_savings_uncertainty', sep = '_')
   total_sav_col = paste(type_flag, 'total_savings', sep = '_')
 
   unc_sav = .subset2(saving_df, unc_sav_col)[1]
   total_sav = .subset2(saving_df, total_sav_col)[1]
+  per_sav = .subset2(saving_df, name)[1]
+
+  if(is.null(per_sav))
+  {
+    per_sav = NA
+  }
 
   moe = unc_sav*total_sav
-  per_sav = total_sav/total_usage
 
-  df = data.frame(per_sav, total_sav, moe, unc_sav)
+  df = data.frame(per_sav*100, total_sav, moe, unc_sav)
   colnames(df) = c('Percent Savings','Total Savings', 'Margin of Error', 'Percent Saving Uncertainty')
   return(df)
 }

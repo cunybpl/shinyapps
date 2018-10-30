@@ -32,7 +32,8 @@ server <- function(input, output, session) {
     if (is.null(inFile3))
       return(NULL)
 
-    read.csv(inFile3$datapath)
+    df = read.csv(inFile3$datapath)
+    df = missing_cols_handler(c('adjusted_pecent_savings'), df)
   })
 
   normalized_saving <- reactive({
@@ -41,7 +42,8 @@ server <- function(input, output, session) {
     if(is.null(inFile4))
       return(NULL)
 
-    read.csv(inFile4$datapath)
+    df = read.csv(inFile4$datapath)
+    df = missing_cols_handler(c('normalized_pecent_savings'), df)
   })
 
   post_df <- reactive({
@@ -205,11 +207,11 @@ server <- function(input, output, session) {
   }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$norm_saving_elec <- renderTable({
-    construct_saving_table(normalized_saving(), util_elec(), 'Elec', 'normalized')
+    construct_saving_table(normalized_saving(), 'Elec', bdbid_n(), 'normalized')
   }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
 
   output$adjust_saving_elec <- renderTable({
-    construct_saving_table(adjust_saving(), util_elec(), 'Elec', 'adjusted')
+    construct_saving_table(adjust_saving(), 'Elec', bdbid_n(), 'adjusted')
   }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
 
   ################################################
@@ -270,11 +272,11 @@ server <- function(input, output, session) {
   }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$norm_saving_fuel <- renderTable({
-    construct_saving_table(normalized_saving(), util_fuel(), 'Fuel', 'normalized')
+    construct_saving_table(normalized_saving(), 'Fuel', bdbid_n(), 'normalized')
   }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
 
   output$adjust_saving_fuel <- renderTable({
-    construct_saving_table(adjust_saving(), util_fuel(), 'Fuel', 'adjusted')
+    construct_saving_table(adjust_saving(), 'Fuel', bdbid_n(), 'adjusted')
   }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
 
   ################################################
