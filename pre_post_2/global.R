@@ -496,8 +496,8 @@ params_table <- function(best_model, bdbid, energy)
 
 help_table <- function()
 {
-  help_df = data.frame(c('Time Series', 'Parameter Model', 'Parameters', 'Stats', 'Post Modeller Table', 'Adjusted Baseline' ,'Adjusted Savings', 'Normalized Baseline', 'Normalized Savings'))
-  help_df$Requirement = c('Utility CSV (a must)', 'Utility CSV and Best Model CSV', 'Utility CSV and Best Model CSV','Utility CSV and Best Model CSV', 'Utility CSV and Post Modeller Calcs CSV', 'Utility CSV and Best Model CSV','Adjusted Savings (and Utility)', 'Utility CSV', 'Normalized Savings (and Utility)')
+  help_df = data.frame(c('Time Series', 'Parameter Model', 'Parameters', 'Stats', 'Post Modeller Table', 'Adjusted Baseline' ,'Gross Savings'))
+  help_df$Requirement = c('Utility CSV (a must)', 'Utility CSV and Best Model CSV', 'Utility CSV and Best Model CSV','Utility CSV and Best Model CSV', 'Utility CSV and Post Modeller Calcs CSV', 'Utility CSV and Best Model CSV','Total Savings CSV and Savings Uncertainty CSV')
   colnames(help_df) = c('Graph/Table', 'Requirement')
   return(help_df)
 }
@@ -525,82 +525,4 @@ missing_cols_handler <- function(cols, df)
   col_null = cols[!(cols %in% org_col)]
   df[,col_null] = NA
   return(df)
-}
-
-total_usage_calc <- function(df, type_flag)
-{
-  name = paste(type_flag, 'usage', sep = '_')
-  if (type_flag == 'normalized_usage')
-  {
-    df = subset(df, df$prepost == 1)
-  }
-  print(df)
-  df = df[name][!is.na(df[name])]
-  print(df)
-  sum(df)
-}
-
-construct_saving_table <- function(saving_df, util, energy, type_flag)
-{ 
-  if(is.null(saving_df))
-  {
-    return(NULL)
-  }
-
-  saving_df = subset(saving_df, saving_df$energy_type == energy)
-  total_usage = total_usage_calc(util, type_flag)
-  unc_sav_col = paste(type_flag, 'percent_savings_uncertainty', sep = '_')
-  total_sav_col = paste(type_flag, 'total_savings', sep = '_')
-
-  unc_sav = .subset2(saving_df, unc_sav_col)[1]
-  total_sav = .subset2(saving_df, total_sav_col)[1]
-
-  moe = unc_sav*total_sav
-  per_sav = total_sav/total_usage
-
-  df = data.frame(per_sav, total_sav, moe, unc_sav)
-  colnames(df) = c('Percent Savings','Total Savings', 'Margin of Error', 'Percent Saving Uncertainty')
-  return(df)
-}
-
-
-plot_normalized_graph <- function(util, energy, b_name = '')
-{ 
-  util$end_date = strptime(util$end_date, format = "%Y-%m-%d")
-  util$month = as.factor(month(util$end_date, label = TRUE, abbr = TRUE))
-
-  util_pre = subset(util, util$prepost == 1)
-  util_post = subset(util, util$prepost == 3)
-
-
-  util_pre = util_pre[order(util_pre[,'month']),]
-  util_post = util_post[order(util_post[,'month']),]
-
-  pre_est = subset(util$estimated, !is.na(util$re))
-  post_est = subset(util$estimated, !is.na(util$re))
-
-  switch(as.character(energy),
-    'Elec' = {
-      y_title = 'Usage(kWh/sqft/month)'
-      usage_color = 'rgba(51, 113, 213, 1)'
-      },
-      {
-        y_title = 'Usage(BTU/sqft/month)'
-        usage_color = 'rgba(240, 24, 28,1)'
-      }
-    )
-
-  #pre_act = add_trace(p = plot_ly(), x = ~util_pre$month, y = ~util_pre$usage, type ='scatter', mode = 'lines', line = list(color = usage_color), name = "Pre Act Usage")
-  #post_act = add_trace(p = pre_act, x = ~util_post$month, y = ~util_post$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(109, 203, 15, 1)'), name = "Post Act Usage")
-  pre_plot = add_trace(p = plot_ly(), x = ~util_pre$month, y = ~util_pre$normalized_usage, type ='scatter', mode = 'lines', line = list(color = usage_color, dash = 'dash'), name = "Pre Norm Usage")
-  post_plot = add_trace(p = pre_plot, x = ~util_post$month, y = ~util_post$normalized_usage, type ='scatter', mode = 'lines',
-                        line = list(color = 'rgba(109, 203, 15, 1)', dash = 'dash'), name = "Post Normalized Usage") 
-  pre_point = add_trace(p = post_plot, x = ~util_pre$month, y = ~util_pre$normalized_usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = usage_color, size = 9), name = 'Pre Norm point')
-  post_point = add_trace(p = pre_point, x = ~util_post$month, y = ~util_post$normalized_usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(109, 203, 15, 1)', size = 9), name = 'Post Norm point') %>%
-              layout(
-                      title = b_name, yaxis = list(title= y_title), margin = list(b = 100),
-                      xaxis = list(title="Date")
-                    )
-
-  return(post_point)
 }
