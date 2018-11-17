@@ -16,7 +16,7 @@ fixing_time <- function(inter_df)
 	inter_df$D2 = strptime(inter_df$Period, format = "%m/%d/%y %H:%M") #this convert factor from original data to time
 	inter_df$D3 = format(inter_df$D2, format = "%a %m/%d/%Y") #get day's name from D2
 	inter_df$times <- strftime(inter_df$D2, format="%H:%M:%S") #get hours and minutes
-	inter_df$color = ifelse( 2 < wday(inter_df$D2)& wday(inter_df$D2)< 7, 'red', ifelse(wday(inter_df$D2) == 2,'blue', 'green')) #add color column
+	inter_df$color = ifelse( 2 < wday(inter_df$D2)& wday(inter_df$D2) < 7, 'red', ifelse(wday(inter_df$D2) == 2,'blue', 'green')) #add color column
 	inter_df$D2 = as.POSIXct(inter_df$D2) #POSIXlt at first, i think
 	inter_df$D3 = as.factor(inter_df$D3) #convert time to factor to use in graph
 
@@ -40,7 +40,6 @@ get_month <- function(month_name)
   month_n = subset(month_df$num, month_df$name == month_name)
   return(as.numeric(month_n))
 }
-
 
 #filter fixed time df by using month_index
 df_month <- function(df, month_n)
