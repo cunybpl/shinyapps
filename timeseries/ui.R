@@ -5,8 +5,10 @@ ui <- fluidPage(
   headerPanel('Time Series'),
   sidebarPanel(
     fileInput("file2", "Choose your input CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
+    uiOutput('col_second'),
     textInput(inputId = 'plot_title', 'Plot Title', value = "", width = NULL, placeholder = NULL),
     textInput(inputId = 'y_title', 'Y-axis Title', value = "", width = NULL, placeholder = NULL),
+    textInput(inputId = 'y_title_2', 'Y-axis Title', value = "", width = NULL, placeholder = NULL),
     selectInput(inputId = 'interval_type', 'Interval Type', c('Second','Minute'), selected = 'Minute', multiple = FALSE, selectize = TRUE, width = NULL, size = NULL),
     numericInput(inputId = 'interval' , 'Interval', value = 0, min = NA, max = NA, step = NA, width = NULL),
     dateRangeInput("daterange1", "Date range:",

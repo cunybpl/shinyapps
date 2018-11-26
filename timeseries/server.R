@@ -14,8 +14,18 @@ server <- function(input, output, session) {
     read.csv(inFile2$datapath)
     })
 
+  col_names <- reactive({
+    colnames(temp_df())
+    })
+
+  output$col_second <- renderUI({
+      tagList(
+        selectInput('y_cols_2_vec', 'Choose Secondary Columns', col_names(), selected = NULL, multiple = TRUE,selectize = TRUE, width = NULL, size = NULL)
+      )
+  })
+
   final_fig <- reactive({
-  	main_handler(temp_df(), input$plot_title, input$y_title, interval = input$interval, interval_type = input$interval_type)
+  	main_handler(temp_df(), input$y_cols_2_vec, input$plot_title, input$y_title, input$y_title_2, interval = input$interval, interval_type = input$interval_type)
   	})
 
   date_range <- reactive({
@@ -24,7 +34,7 @@ server <- function(input, output, session) {
     })
 
   figure <- reactive({
-    main_handler(temp_df(), input$plot_title, input$y_title, date_range(), interval = input$interval, interval_type = input$interval_type)
+    main_handler(temp_df(), input$y_cols_2_vec, input$plot_title, input$y_title, input$y_title_2, date_range(), interval = input$interval, interval_type = input$interval_type)
     })
 
   output$plot1 <- renderPlotly({final_fig()})

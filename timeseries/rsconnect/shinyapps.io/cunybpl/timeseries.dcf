@@ -5,6 +5,6 @@ account: cunybpl
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 383133
-bundleId: 1556304
+bundleId: 1713426
 url: https://cunybpl.shinyapps.io/timeseries/
-when: 1535386714.8318
+when: 1542820743.60637

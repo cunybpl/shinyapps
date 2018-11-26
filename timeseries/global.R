@@ -17,7 +17,7 @@ make_ind_df <- function(df, names, dt_names, i)
 	return(df)
 }
 
-main_handler <- function(df, title_n = '', y_name = '', date_range = NULL, interval = 0, interval_type = 'Minute')
+main_handler <- function(df, y_cols_2 = NULL, title_n = '', y_name = '', y_name_2 = '', date_range = NULL, interval = 0, interval_type = 'Minute')
 {
 	names = colnames(df)
 	dt_names = grep('datetime', names)
@@ -41,7 +41,7 @@ main_handler <- function(df, title_n = '', y_name = '', date_range = NULL, inter
 	for (i in c(1:length(dt_names)))
 	{	
 		temp_df = make_ind_df(df, names, dt_names, i)
-		p1 = plot_handler(temp_df, min_max_val, p1, title_n, y_name, date_range, interval, interval_type)
+		p1 = plot_handler(temp_df, min_max_val, p1, y_cols_2, title_n, y_name, y_name_2, date_range, interval, interval_type)
 	}
 	if(length(df_weekend) != 0)
 	{
@@ -50,11 +50,18 @@ main_handler <- function(df, title_n = '', y_name = '', date_range = NULL, inter
 	return(p1)
 }
 
-plot_handler <- function(df, min_max_val, p1 = plot_ly(), title_n = '', y_name = '', date_range = NULL, interval = 0, interval_type = 'Minute')
+plot_handler <- function(df, min_max_val, p1 = plot_ly(), y_cols_2 = NULL, title_n = '', y_name = '', y_name_2 = '',date_range = NULL, interval = 0, interval_type = 'Minute')
 {	
 	col_name = colnames(df)
 	x_name = col_name[1]
 	y_cols = col_name[2:length(col_name)]
+
+	second_flag = FALSE
+	if(!is.null(y_cols_2))
+	{	
+		second_flag = TRUE
+		y_cols = y_cols[!(y_cols %in% y_cols_2)]
+	}
 
 
 	format_n = date_time_format_finder(as.character(df[[x_name]][1]))
@@ -76,6 +83,22 @@ plot_handler <- function(df, min_max_val, p1 = plot_ly(), title_n = '', y_name =
 	{	
 		p1 = add_trace(p = p1, x = df[[x_name]], y = df[[y_i]], type ='scatter', mode = 'lines', name = y_i) %>%
 					layout(showlegend = TRUE, title = title_n, xaxis = list(type = "date", title="Date", tickformat = "%m/%d/%y %H:%M"),yaxis = list(title= y_name), margin = list(b = 200))
+	}
+
+	if (second_flag)
+	{	
+		  ay <- list(
+		      tickfont = list(color = "red"),
+		      overlaying = "y",
+		      side = "right",
+		      title = y_name_2
+		 	)
+
+		for (y_i_2 in y_cols_2)
+		{	
+			p1 = add_trace(p = p1, x = df[[x_name]], y = df[[y_i_2]], type ='scatter', mode = 'lines', name = y_i_2, yaxis = 'y2') %>%
+					layout(showlegend = TRUE, title = title_n, xaxis = list(type = "date", title="Date", tickformat = "%m/%d/%y", tickangle = -45), yaxis2 = ay, margin = list(b = 200))
+		}
 	}
 
 	return(p1)
