@@ -1,0 +1,10 @@
+name: mongo_test
+title:
+username:
+account: cunybpl
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 590251
+bundleId: 1721370
+url: https://cunybpl.shinyapps.io/mongo_test/
+when: 1543254787.71306
