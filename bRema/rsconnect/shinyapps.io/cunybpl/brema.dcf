@@ -5,6 +5,6 @@ account: cunybpl
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 262951
-bundleId: 1586404
+bundleId: 1739485
 url: https://cunybpl.shinyapps.io/brema/
-when: 1536957248.51673
+when: 1543934830.65299

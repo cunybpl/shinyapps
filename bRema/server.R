@@ -123,7 +123,7 @@ server <- function(input, output, session) {
   })
 
   output$plot3 <- renderPlotly({
-      plot_timeseries(result()$util, input$energy)
+      plot_timeseries_2(result()$util, input$energy, input$sqft)
   })
 
   output$params <- renderTable({

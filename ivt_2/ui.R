@@ -20,7 +20,8 @@ ui <- fluidPage(
             h4('Input Files Format'),
             h5('Interval Data CSV'),
             tags$ul(
-                tags$li("Column Names: 'date', <meter_1>, <meter_2>,...,<meter_n>"),
+                tags$li("Column Names: 'Interval End', <meter_1>, <meter_2>,...,<meter_n>"),
+                tags$li("'Interval End' column will be renamed to 'date'"),
                 tags$li("Format of 'date' column: yyyy-mm-dd HH:MM. For example, 2017-04-31 12:00:00. Note: Second is optional but they need to be zero."),
                 tags$li("Sometimes, there may be extra column of rownames. In that case, 'date' will be automatically choosen as 'Meter Type'. Thus, one will have to change meter type.")
             ),
@@ -39,7 +40,7 @@ ui <- fluidPage(
           tableOutput('day_count'),
           h5('Hour Count'),
           tableOutput('hour_count'),
-          h5('Time for which demands are approximated'),
+          textOutput('approx_alert'),
           tableOutput('approx_count')
           ),
         tabPanel("Weekly Graph",

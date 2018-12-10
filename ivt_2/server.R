@@ -189,4 +189,6 @@ server <- function(input, output){
     make_data_req_table()
     }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
+  output$approx_alert <- renderText({cout_df()$approx_msg})
+
 }

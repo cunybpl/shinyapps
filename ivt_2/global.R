@@ -6,8 +6,9 @@ library(plyr)
 
 prepare_data_func <- function(df)
 {
-	df$date = strptime(df$date, format = "%Y-%m-%d %H:%M")
-	df$y_m_d = strftime(df$date, format = "%Y-%m-%d")
+	#df$date = strptime(df$date, format = "%Y-%m-%d %H:%M")
+	df$date = fixed_time(df$date)
+  df$y_m_d = strftime(df$date, format = "%Y-%m-%d")
 	df$year = year(df$date)
 	df$week_number = strftime(df$y_m_d, format = "%U")
 	df$date = as.POSIXct(df$date)
@@ -41,10 +42,18 @@ count_func <- function(df, interval)
   colnames(day_df) = c('Weekday Count', 'Weekend or Holiday Count')
 
   approx_df = data.frame(approx_date = subset(df$date, is.na(df$demand)))
+
+  approx_msg = 'Data are missing for the following date(s) and time(s).'
+  
+  if(length(approx_df))
+  {
+    approx_msg = 'No missing data. No data points are approximated.' 
+  }
+
   approx_df$approx_date = strftime(approx_df$approx_date)
   colnames(approx_df) = c('Approx Time')
 
-	return(list(hour_df = hour_df, approx_df = approx_df, day_df = day_df))
+	return(list(hour_df = hour_df, approx_df = approx_df, day_df = day_df, approx_msg = approx_msg))
 }
 
 calc_usage_func <- function(df, interval)
@@ -245,4 +254,17 @@ make_data_req_table <- function()
   df = data.frame(Output = output_vec, Input = input_vec)
   colnames(df) = c('Graphs and Tables','Input Files')
   return(df)
+}
+
+fixed_time <- function(date_vec)
+{ 
+  if (grepl('/', date_vec[1]))
+  {
+      date_vec = strptime(date_vec, format = "%m/%d/%y %H:%M")
+  }else
+  {
+      date_vec = strptime(date_vec, format = "%Y-%m-%d %H:%M")
+  }
+
+  return(date_vec)
 }

@@ -14,9 +14,12 @@ ui <- fluidPage(
     uiOutput("second"),
     fluidRow(
         column(4, actionButton(inputId = "prevBin", label = "Previous")),
-        column(4, actionButton(inputId = "nextBin", label = "Next")),
-        column(width= 4, checkboxInput('step', 'Multiple Step', value = FALSE, width = NULL))
+        column(4, actionButton(inputId = "nextBin", label = "Next"))
         #column(2, checkboxInput(inputId = 'aggregate', label = "Aggregate", value = FALSE, width = NULL))
+    ),
+    fluidRow(
+      column(width= 4, checkboxInput('step', 'Multiple Step', value = FALSE, width = NULL)),
+      column(width= 6, checkboxInput('sqft', 'Normalized by sqft', value = FALSE, width = NULL))
     ),
     selectInput('model', 'Choose model', c('2P','3PC', '3PH', '4P', '5P'), selected = NULL, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
   ),
