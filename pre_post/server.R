@@ -4,7 +4,7 @@ library(plotly)
 
 server <- function(input, output, session) {
 
-  best_model <- reactive({
+  best_model_org <- reactive({
     inFile <- input$file1
 
     if (is.null(inFile))
@@ -13,7 +13,11 @@ server <- function(input, output, session) {
     read.csv(inFile$datapath)
     })
 
-  temp_df <- reactive({
+  best_model <- reactive(({
+    filter_project_session(best_model_org(), input$session, input$project)
+    }))
+
+  org_util_df <- reactive({
     inFile2 <- input$file2
 
     if (is.null(inFile2))
@@ -21,12 +25,42 @@ server <- function(input, output, session) {
 
     df = read.csv(inFile2$datapath)
     colnames(df)[colnames(df) == 'oat'] <- 'OAT'
-    util_cols = c("normalized_usage", "noaa_temps", "adjusted_usage")
+    util_cols = c("normalized_usage", "noaa_temps", "adjusted_usage", "project_id", "timestamp")
     df = missing_cols_handler(util_cols, df)
     df = fixed_time(df)
     })
 
-  adjust_saving <- reactive({
+  session_vec <- reactive({
+    unique(org_util_df()$timestamp)
+    })
+
+  output$session_out <- renderUI({
+    tagList(
+      selectInput('session', 'Choose session', session_vec(), multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  project_vec <- reactive({
+    if (input$session == 'NA')
+    {
+      return(NA)
+    }else{
+      
+      return(subset(org_util_df()$project_id, org_util_df()$timestamp == input$session))
+    }
+    })
+
+  output$project_out <- renderUI({
+    tagList(
+      selectInput('project', 'Choose project', project_vec(), multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  temp_df <- reactive({
+    filter_project_session(org_util_df(), input$session, input$project)
+    })
+
+  adjust_saving_org <- reactive({
     inFile3 <- input$file3
 
     if (is.null(inFile3))
@@ -36,7 +70,11 @@ server <- function(input, output, session) {
     df = missing_cols_handler(c('adjusted_pecent_savings'), df)
   })
 
-  normalized_saving <- reactive({
+  adjust_saving <- reactive({
+    filter_project_session(adjust_saving_org(), input$session, input$project)
+    })
+
+  normalized_saving_org <- reactive({
     inFile4 <- input$file4
 
     if(is.null(inFile4))
@@ -46,14 +84,24 @@ server <- function(input, output, session) {
     df = missing_cols_handler(c('normalized_pecent_savings'), df)
   })
 
-  post_df <- reactive({
+  normalized_saving <- reactive({
+    filter_project_session(normalized_saving_org(), input$session, input$project)
+    })
+
+  post_df_org <- reactive({
     inFile5 <- input$file5
 
     if(is.null(inFile5))
       return(NULL)
 
-    read.csv(inFile5$datapath)
+    df = read.csv(inFile5$datapath)
+    df = percent_heat_cool_func(df)
+    #df = missing_cols_handler(c('percent_heating', 'percent_cooling', 'percent_baseload'), df)
   })
+
+  post_df <- reactive({
+    filter_project_session(post_df_org(), input$session, input$project)
+    })
 
   binfo_df <- reactive({
     inFile6 <- input$file6

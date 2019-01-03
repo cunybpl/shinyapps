@@ -1,5 +1,7 @@
 library(plotly)
+library(lubridate)
 library(rdrop2)
+
 
 plot_baseload <- function(util, energy, model, B, cp1 = 0, cp2 =0, b_name) #x,y -> data, B -> bestvalue$params, cp1,2 -> bestvalue$cp1,2
 { 
@@ -105,7 +107,7 @@ flag_func <- function(df, bdbid_n, energy)
   return(flag)
 }
 
-plot_model <- function(x, model, B, cp1, cp2, key, pre_key, unit, bw, p1 = plot_ly())
+plot_model <- function(x, model, B, cp1, cp2, energy, pre_key, unit, p1 = plot_ly())
 { 
   options(digits=15)
   require(ggplot2)
@@ -158,92 +160,55 @@ plot_model <- function(x, model, B, cp1, cp2, key, pre_key, unit, bw, p1 = plot_
   }
 
 
-  if (key == 'elec'){
-    color_n = ifelse(pre_key == 1, 'rgba(51, 113, 213, 1)', 'rgba(109, 203, 15, 1)')
-    name_n = ifelse(pre_key == 1, 'Pre Elec Model', 'Post Elec Model')
-    if (bw)
-    { 
-      #model_fig = geom_line(data = df, aes(x = x, y = y, color = 'Elec Model'), linetype = 2)
-      model_fig = add_trace(p = p1, x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n, dash = 'dash'), name = name_n, inherit = FALSE)
-    }else
-    {
-      #model_fig = geom_line(data = df, aes(x = x, y = y, color = 'Elec Model'))
-      model_fig = add_trace(p = p1, x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n), name = name_n, inherit = FALSE)
+  switch(as.character(pre_key),
+    "1" = {
+      pre_title = 'Pre'
+      color_n = switch(as.character(energy), 'Elec' = 'rgba(51, 113, 213, 1)', 'rgba(240, 24, 28,1)')
+      },
+    "3" ={
+      pre_title = 'Post'
+      color_n = 'rgba(109, 203, 15, 1)'
     }
-  }else
-  { 
-    color_n = ifelse(pre_key == 1, 'rgba(240, 24, 28,1)', 'rgba(109, 203, 15, 1)')
-    name_n = ifelse(pre_key == 1, 'Pre Fuel Model', 'Post Fuel Model')
-    if (bw)
-    {
-      #model_fig = geom_line(data = df, aes(x = x, y = y, color = 'Fuel Model'), linetype = 2)
-      model_fig = add_trace(p = p1, x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n, dash = 'dash'), name = name_n, inherit = FALSE)
-    }else
-    {
-      #model_fig = geom_line(data = df, aes(x = x, y = y, color = 'Fuel Model'))
-      model_fig = add_trace(p = p1, x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n), name = name_n, inherit = FALSE)
-    }
-  }
+    )
+
+  name_n = paste(pre_title, energy, 'Model')
+
+
+  model_fig = add_trace(p = p1,  x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n), name = name_n, inherit = FALSE)
+  
   return(model_fig)
 }
 
 
-plot_point_3 <- function(df, key, pre_key, model_fig = plot_ly(), b_name = '')
+plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), b_name = '')
 { 
   util_act = subset(df, df$z == 'Act')
   util_est = subset(df, df$z == 'Est')
 
-  if (key == 'elec'){
-    color_n = ifelse(pre_key == 1, 'rgba(51, 113, 213, 1)', 'rgba(109, 203, 15, 1)')
-    name_n = ifelse(pre_key == 1, 'Pre Elec', 'Post Elec')
-    #point_fig = geom_point(data = df, aes(x = x, y= y, shape= factor(z), color = 'Elec Consumption'))
-    point_fig_act = add_trace(p = model_fig, x = ~util_act$x, y = ~util_act$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = paste(name_n, 'Act', sep = ' '), inherit = FALSE)
-    if (length(unique(df$z)) == 3)
-    {
-      util_agg = subset(df, df$z == 'Agg')
-      point_fig_act = add_trace(p = point_fig_act, x = ~util_agg$x, y = ~util_agg$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = 'rgba(38, 114, 38, 1)', size = 9), name = 'Elec Agg', inherit = FALSE)
+  switch(as.character(pre_key),
+    "1" = {
+      pre_title = 'Pre'
+      color_n = switch(as.character(energy), 'Elec' = 'rgba(51, 113, 213, 1)', 'rgba(240, 24, 28,1)')
+      },
+    "3" ={
+      pre_title = 'Post'
+      color_n = 'rgba(109, 203, 15, 1)'
     }
-    point_fig = add_trace(p = point_fig_act, x = ~util_est$x, y = ~util_est$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = paste(name_n, 'Est', sep = ' '), inherit = FALSE)%>%
+    )
+
+  name_n = paste(pre_title, energy)
+
+  axis_title = switch(as.character(energy), 'Elec' = "Usage (kWh)", "Usage (BTU)")
+
+  point_fig_act = add_trace(p = model_fig, x = ~util_act$x, y = ~util_act$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = paste(name_n, 'Act'), inherit = FALSE)
+  point_fig = add_trace(p = point_fig_act, x = ~util_est$x, y = ~util_est$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = paste(name_n, 'Est'), inherit = FALSE)%>%
     layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
       xaxis = list(title = "Temperature"),
-      yaxis = list(title = "Usage (kWh)"))
-  }else if (key == 'fuel')
-  { 
-    color_n = ifelse(pre_key == 1, 'rgba(240, 24, 28,1)', 'rgba(109, 203, 15, 1)')
-    name_n = ifelse(pre_key == 1, 'Pre Fuel', 'Post Fuel')
-    #point_fig = geom_point(data = df, aes(x = x, y= y, shape= factor(z), color = 'Fuel Consumption'))
-    point_fig_act = add_trace(p = model_fig, x = ~util_act$x, y = ~util_act$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = paste(name_n, 'Act', sep = ' '), inherit = FALSE)
-    if (length(unique(df$z)) == 3)
-    {
-      util_agg = subset(df, df$z == 'Agg')
-      point_fig_act = add_trace(p = point_fig_act, x = ~util_agg$x, y = ~util_agg$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = 'rgba(38, 114, 38, 1)', size = 9), name = 'Fuel Agg', inherit = FALSE)
-    }
-    point_fig = add_trace(p = point_fig_act, x = ~util_est$x, y = ~util_est$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = paste(name_n, 'Est', sep = ' '), inherit = FALSE)%>%
-    layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
-      xaxis = list(title = "Temperature"),
-      yaxis = list(title = "Usage (BTU)"))
-  }else
-  {
-    point_fig = geom_point(data = df, aes(x = x, y= y, color = 'retofit_act'))
-  }
+      yaxis = list(title = axis_title))
+
   return(point_fig)
 }
 
-plot_point <- function(x, y, key)
-{ 
-  require(ggplot2)
-  df = data.frame(x= x, y= y)
-  if (key == 'pre'){
-    point_fig = geom_point(data = df, aes(x = x, y= y, color = 'pre_act'))
-  }else if (key == 'post')
-  {
-    point_fig = geom_point(data = df, aes(x = x, y= y, color = 'post_act'))
-  }else
-  {
-    point_fig = geom_point(data = df, aes(x = x, y= y, color = 'retofit_act'))
-  }
-  return(point_fig)
-}
 
 params_list <- function(best_model, bdbid, energy, prepost)
 { 
@@ -274,55 +239,7 @@ params_matrix <- function(params_vec)
   return(B)
 }
 
-best_worst <- function(best_model, bdbid, energy, prepost)
-{  
-  if (is.null(best_model$best))
-  {
-    bw_bool = FALSE
-  }else
-  {
-    bw = best_model$best[best_model$bdbid == bdbid & best_model$energy_type == energy & best_model$prepost == prepost]
-    bw_bool = ifelse(as.character(bw) == 'rejected model', TRUE, FALSE)
-  }
-  return(bw_bool)
-}
-
 plot_timeseries <- function(util, energy)
-{ 
-  options(digits=15)
-  r1 = util$end_date[length(subset(util$end_date, util$prepost == 1))]
-  r2 = util$end_date[length(subset(util$end_date, util$prepost == 1 | util$prepost == 2))+1]
-  ay <- list(
-      tickfont = list(color = "red"),
-      overlaying = "y",
-      side = "right",
-      title = "OAT"
-  )
-
-  if (energy == 'Elec')
-  {
-      p <- plot_ly() %>%
-      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(51, 113, 213, 1)'), name = "Usage") %>%
-      add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
-      layout(shapes=list(list(type='line', x0= ~r1, x1= ~r1, y0=min(util$usage), y1=max(util$usage), line=list(dash='dot', width=1)),
-      list(type='line', x0= ~r2, x1= ~r2, y0=min(util$usage), y1=max(util$usage), line=list(dash='dot', width=1))),
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage'), margin = list(b = 100),
-      xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date))
-  }else{
-    p <- plot_ly() %>%
-      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(240, 24, 28,1)'), name = "Usage") %>%
-      add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
-      layout(shapes=list(list(type='line', x0= ~r1, x1= ~r1, y0=min(util$usage), y1=max(util$usage), line=list(dash='dot', width=1)),
-      list(type='line', x0= ~r2, x1= ~r2, y0=min(util$usage), y1=max(util$usage), line=list(dash='dot', width=1))),
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage'), margin = list(b = 100),
-      xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date))
-  }
-
-  return(p)
-}
-
-
-plot_timeseries_2 <- function(util, energy)
 { 
   #plot timeseries. Unlike pplot_timeseries function, it also plots points and the shape of the points is now adjusted (Act or Est)
   options(digits=15)
@@ -337,29 +254,27 @@ plot_timeseries_2 <- function(util, energy)
       side = "right",
       title = "OAT"
   )
-  if (energy == 'Elec')
-  {
-    p <- plot_ly() %>%
+
+  switch(as.character(energy),
+    'Elec' = {
+      y_title = 'Usage(kWh/month)'
+      usage_color = 'rgba(51, 113, 213, 1)'
+      },
+      {
+        y_title = 'Usage(BTU/month)'
+        usage_color = 'rgba(240, 24, 28,1)'
+      }
+    )
+
+  p <- plot_ly() %>%
       add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
-      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(51, 113, 213, 1)'), name = "Usage") %>%
-      add_trace(x = ~util_est$end_date, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(51, 113, 213, 1)', size = 9), name = 'Est') %>%
-      add_trace(x = ~util_act$end_date, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = 'rgba(51, 113, 213, 1)', size = 9), name = 'Act') %>%
+      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = usage_color), name = "Usage") %>%
+      add_trace(x = ~util_est$end_date, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = usage_color, size = 9), name = 'Est') %>%
+      add_trace(x = ~util_act$end_date, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = usage_color, size = 9), name = 'Act') %>%
       layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage(kWh/sq/month)'), margin = list(b = 100),
+      title = "Time Series", yaxis2 = ay, yaxis = list(title= y_title), margin = list(b = 100),
       xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date)
     )
-  }else
-  {
-    p <- plot_ly() %>%
-      add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'),  name = "OAT", yaxis = "y2") %>%
-      add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(240, 24, 28,1)'), name = "Usage") %>%
-      add_trace(x = ~util_est$end_date, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(240, 24, 28,1)', size = 9), name = 'Est') %>%
-      add_trace(x = ~util_act$end_date, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = 'rgba(240, 24, 28,1)', size = 9), name = 'Act') %>%
-      layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage(BTU/sqft/month)'), margin = list(b = 100),
-      xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date)
-    )
-  }
 
   return(p)
 }
@@ -469,58 +384,40 @@ stat_table <- function(best_model, bdbid_n, energy_n)
 }
 
 
-plot_point_2 <- function(df, key)
-{ 
-  require(ggplot2)
-  if (key == 'pre'){
-    point_fig = geom_point(data = df, aes(x = x, y= y, shape = factor(z), color = 'Pre Consumption'))
-  }else if (key == 'post')
-  {
-    point_fig = geom_point(data = df, aes(x = x, y= y, shape = factor(z), color = 'Post Consumption'))
-  }else
-  {
-    point_fig = geom_point(data = df, aes(x = x, y= y, shape = factor(z), color = 'retofit_act'))
-  }
-  return(point_fig)
-}
-
 main_plot_model <- function(util, best_model, bdbid_n, energy, b_name = '')
 { 
   options(digits=15) 
+
+
+  x1 = subset(util$OAT, util$prepost == 1)
+  x3 = subset(util$OAT, util$prepost == 3)
+
+  y1 = subset(util$usage, util$prepost == 1)
+  y3 = subset(util$usage, util$prepost == 3)
+
+  z1 = ifelse(subset(util$estimated, util$prepost == 1) == 1 , 'Est', 'Act')
+  z3 = ifelse(subset(util$estimated, util$prepost == 3) == 1, 'Est', 'Act')
+
+  df1 = data.frame(x = x1, y = y1, z = z1)
+  df3 = data.frame(x = x3, y = y3, z = z3)
+
+
   if (flag_func(best_model, bdbid_n, energy))
   {   
       params_pre = params_list(best_model, bdbid_n, energy, 1)
       params_post = params_list(best_model, bdbid_n, energy, 3)
 
-      bw_pre = best_worst(best_model, bdbid_n, energy, 1)
-      bw_post = best_worst(best_model, bdbid_n, energy, 3)
-
       B_pre = params_matrix(params_pre)
       B_post = params_matrix(params_post)
 
-      x1 = subset(util$OAT, util$prepost == 1)
-      x2 = subset(util$OAT, util$prepost == 2)
-      x3 = subset(util$OAT, util$prepost == 3)
-
-      y1 = subset(util$usage, util$prepost == 1)
-      y2 = subset(util$usage, util$prepost == 2)
-      y3 = subset(util$usage, util$prepost == 3)
-
-      z1 = ifelse(subset(util$estimated, util$prepost == 1) == 1 , 'Est', 'Act')
-      #z2 = ifelse(subset(util$estimated, util$prepost == 2) == 1, 'Est', 'Act')
-      z3 = ifelse(subset(util$estimated, util$prepost == 3) == 1, 'Est', 'Act')
-
-      df1 = data.frame(x = x1, y = y1, z = z1)
-      df3 = data.frame(x = x3, y = y3, z = z3)
-
-      energy_key = ifelse(energy == 'Elec', 'elec', 'fuel')
-      pre_plot_model = plot_model(x1, params_pre$model, B_pre, params_pre$cp1, params_pre$cp2, energy_key,1, FALSE, bw_pre, plot_ly())
-      post_plot_model = plot_model(x3, params_post$model, B_post, params_post$cp1, params_post$cp2, energy_key,3, FALSE, bw_post, pre_plot_model)
-      pre_point_fig = plot_point_3(df1, energy_key, 1,post_plot_model)
-      final_figure = plot_point_3(df3, energy_key, 3, pre_point_fig, b_name)
+      pre_plot_model = plot_model(x1, params_pre$model, B_pre, params_pre$cp1, params_pre$cp2, energy,1, FALSE, plot_ly())
+      post_plot_model = plot_model(x3, params_post$model, B_post, params_post$cp1, params_post$cp2, energy,3, FALSE, pre_plot_model)
+      pre_point_fig = plot_point(df1, energy, 1,post_plot_model)
+      final_figure = plot_point(df3, energy, 3, pre_point_fig, b_name)
   }else
   { 
-    final_figure = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy, 'for', b_name))
+    pre_point_fig = plot_point(df1, energy, 1, plot_ly())
+    final_figure = plot_point(df3, energy, 3, pre_point_fig, b_name)
   }
   return(final_figure)
 }
@@ -532,9 +429,6 @@ main_plot_baseload <- function(util, best_model, bdbid_n, energy, b_name = '')
   {
       params_pre = params_list(best_model, bdbid_n, energy, 1)
       params_post = params_list(best_model, bdbid_n, energy, 3)
-
-      bw_pre = best_worst(best_model, bdbid_n, energy, 1)
-      bw_post = best_worst(best_model, bdbid_n, energy, 3)
 
       B_pre = params_matrix(params_pre)
       B_post = params_matrix(params_post)
@@ -558,42 +452,6 @@ binfo_table <- function(binfo_df, bdbid_n)
   rownames(binfo_df2) = c('Agency', 'Primary Function', 'Gross Square Feet')
   return(list(binfo_df1 = binfo_df1, binfo_df2 = binfo_df2))
 }
-
-
-get_dropdown_info_2 <- function(dir_path = 'shiny/retrofit_output', new_user_flag = FALSE)
-{
-  drop_auth(rdstoken = 'droptoken.rds')
-  parent_path = drop_dir(dir_path)$path_lower
-  cat_df = data.frame(parent_path = parent_path)
-  child_vec = c()
-  for (i in parent_path)
-  {
-    child_folder = drop_dir(i)
-    child_vec = c(child_vec, child_folder$name)
-  }
-  cat_df$category = child_vec
-  cat_df$child_path = paste(cat_df$parent_path, cat_df$category, sep = '/')
-  return(cat_df)
-}
-
-
-get_dd_date <- function(cat_df, category_n)
-{
-  path = subset(cat_df$child_path, cat_df$category == category_n)
-  p_df = data.frame(p0 = drop_dir(path)$name)
-  #p_df = data.frame(p0 = sort(p_df$p0, decreasing = FALSE))
-  p_df$path = paste(path,p_df$p0,sep='/')
-  return(p_df)
-}
-
-get_dd_year <- function(cat_df, point)
-{
-  path_point = subset(cat_df$path, cat_df$p1 == point)
-  fy_df = data.frame(fy0 = drop_dir(path_point)$name)
-  fy_df$path = paste(path_point,fy_df$fy0,sep='/')
-  return(fy_df)
-}
-
 
 get_building_name <- function(binfo_df, bdbid_n)
 { 
@@ -640,8 +498,132 @@ params_table <- function(best_model, bdbid, energy)
 
 help_table <- function()
 {
-  help_df = data.frame(c('Time Series', 'Parameter Model', 'Parameters', 'Stats', 'Post Modeller Table', 'Adjusted Baseline' ,'Gross Savings'))
-  help_df$Requirement = c('Utility CSV (a must)', 'Utility CSV and Best Model CSV', 'Utility CSV and Best Model CSV','Utility CSV and Best Model CSV', 'Utility CSV and Post Modeller Calcs CSV', 'Utility CSV and Best Model CSV','Total Savings CSV and Savings Uncertainty CSV')
+  help_df = data.frame(c('Time Series', 'Parameter Model', 'Parameters', 'Stats', 'Post Modeller Table', 'Adjusted Baseline' ,'Adjusted Savings', 'Normalized Baseline', 'Normalized Savings'))
+  help_df$Requirement = c('Utility CSV (a must)', 'Utility CSV and Best Model CSV', 'Utility CSV and Best Model CSV','Utility CSV and Best Model CSV', 'Utility CSV and Post Modeller Calcs CSV', 'Utility CSV and Best Model CSV','Adjusted Savings (and Utility)', 'Utility CSV', 'Normalized Savings (and Utility)')
   colnames(help_df) = c('Graph/Table', 'Requirement')
   return(help_df)
+}
+
+fixed_time <- function(util)
+{ 
+    if(!is.POSIXlt(util$end_date) & !is.POSIXt(util$end_date) & !is.POSIXct(util$end_date))
+  { 
+    if (grepl('/', util$end_date[1]))
+    {
+      util$end_date = strptime(util$end_date, format = "%m/%d/%Y")
+    }else
+    {
+      util$end_date = strptime(util$end_date, format = "%Y-%m-%d")
+    }
+  }
+
+  util$end_date = as.factor(util$end_date)
+  return(util)
+}
+
+missing_cols_handler <- function(cols, df)
+{ 
+  org_col = colnames(df)
+  col_null = cols[!(cols %in% org_col)]
+  df[,col_null] = NA
+  return(df)
+}
+
+construct_saving_table <- function(saving_df, energy, bdbid_n, type_flag)
+{ 
+  if(is.null(saving_df))
+  {
+    return(NULL)
+  }
+
+  name = paste(type_flag, 'percent_savings', sep = '_')
+  saving_df = subset(saving_df, saving_df$energy_type == energy & saving_df$bdbid == bdbid_n)
+  unc_sav_col = paste(type_flag, 'percent_savings_uncertainty', sep = '_')
+  total_sav_col = paste(type_flag, 'total_savings', sep = '_')
+
+  unc_sav = .subset2(saving_df, unc_sav_col)[1]
+  total_sav = .subset2(saving_df, total_sav_col)[1]
+  per_sav = .subset2(saving_df, name)[1]
+
+  if(is.null(per_sav))
+  {
+    per_sav = NA
+  }
+
+  moe = unc_sav*total_sav
+
+  df = data.frame(per_sav*100, total_sav, moe, unc_sav*100)
+  colnames(df) = c('Percent Savings','Total Savings', 'Margin of Error', 'Percent Saving Uncertainty')
+  return(df)
+}
+
+
+plot_normalized_graph <- function(util, energy, b_name = '')
+{ 
+  util$end_date = strptime(util$end_date, format = "%Y-%m-%d")
+  util$month = as.factor(month(util$end_date, label = TRUE, abbr = TRUE))
+
+  util_pre = subset(util, util$prepost == 1)
+  util_post = subset(util, util$prepost == 3)
+
+
+  util_pre = util_pre[order(util_pre[,'month']),]
+  util_post = util_post[order(util_post[,'month']),]
+
+  pre_est = subset(util$estimated, !is.na(util$re))
+  post_est = subset(util$estimated, !is.na(util$re))
+
+  switch(as.character(energy),
+    'Elec' = {
+      y_title = 'Usage(kWh/sqft/month)'
+      usage_color = 'rgba(51, 113, 213, 1)'
+      },
+      {
+        y_title = 'Usage(BTU/sqft/month)'
+        usage_color = 'rgba(240, 24, 28,1)'
+      }
+    )
+
+  #pre_act = add_trace(p = plot_ly(), x = ~util_pre$month, y = ~util_pre$usage, type ='scatter', mode = 'lines', line = list(color = usage_color), name = "Pre Act Usage")
+  #post_act = add_trace(p = pre_act, x = ~util_post$month, y = ~util_post$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(109, 203, 15, 1)'), name = "Post Act Usage")
+  pre_plot = add_trace(p = plot_ly(), x = ~util_pre$month, y = ~util_pre$normalized_usage, type ='scatter', mode = 'lines', line = list(color = usage_color, dash = 'dash'), name = "Pre Norm Usage")
+  post_plot = add_trace(p = pre_plot, x = ~util_post$month, y = ~util_post$normalized_usage, type ='scatter', mode = 'lines',
+                        line = list(color = 'rgba(109, 203, 15, 1)', dash = 'dash'), name = "Post Normalized Usage") 
+  pre_point = add_trace(p = post_plot, x = ~util_pre$month, y = ~util_pre$normalized_usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = usage_color, size = 9), name = 'Pre Norm point')
+  post_point = add_trace(p = pre_point, x = ~util_post$month, y = ~util_post$normalized_usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(109, 203, 15, 1)', size = 9), name = 'Post Norm point') %>%
+              layout(
+                      title = b_name, yaxis = list(title= y_title), margin = list(b = 100),
+                      xaxis = list(title="Date")
+                    )
+
+  return(post_point)
+}
+
+
+get_dropdown_info <- function(dir_path = 'bpl_data/parsed-projects/parsed-projects')
+{
+  drop_auth(rdstoken = 'droptoken.rds')
+  sessions = drop_dir(dir_path)$name
+  cat_df = data.frame()
+  for (i in sessions)
+  { 
+    child_vec = c()
+    session_path = paste(dir_path, i, sep = '/')
+    child_folder = drop_dir(session_path)
+    child_vec = c(child_vec, child_folder$name)
+    temp_df = data.frame(project_id = child_vec, timestamp = i)
+    cat_df = rbind(cat_df, temp_df)
+  }
+  cat_df$child_path = paste(dir_path, cat_df$timestamp, cat_df$project_id, sep = '/')
+  return(cat_df)
+}
+
+percent_heat_cool_func <- function(df)
+{ 
+  options(digits=15)
+  df$percent_cooling = 100*df$cool_load/df$total_consumption
+  df$percent_heating = 100*df$heat_load/df$total_consumption
+  df$percent_baseload = 100 - df$percent_cooling - df$percent_heating
+  df$baseload = df$total_consumption*df$percent_baseload
+  return(df)
 }

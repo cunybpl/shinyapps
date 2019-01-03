@@ -10,6 +10,8 @@ ui <- fluidPage(
     fileInput("file5", "Choose Post Modeller CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
     fileInput("file3", "Choose Adjusted Saving CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
     fileInput("file4", "Choose Normalized Saving CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
+    uiOutput("session_out"),
+    uiOutput("project_out"),
     uiOutput("first"),
     fluidRow(
         column(4, actionButton(inputId = "prevBin", label = "Previous")),
@@ -24,8 +26,6 @@ ui <- fluidPage(
             h4("PLEASE DO NOT CLICK ANYTHING ON THIS PAGE WHEN SHINY IS LOADING DROPDOWN MENUS."),
             h5("Please wait until 'Choose Facility' dropdown shows up."),
             tableOutput('help'),
-            h5("To get started, upload BEMA CSV output file to dropbox 'shiny/retrofit_output/{project_ouput}/{project}/{run_date}' folder. Then refresh this page again and just wait for shiny to load drop down menus. If files have already been uploaded to dropbox, just wait for shiny to load."),
-            h5("Please make sure every file name is in this format: {specific filename}_{project}_{run_date}.csv. For example, 'utility_ace_2018-04-04.csv'"),
             h5('Time Series: If there is only one energy type or information of bdbid is missing, it will show either a blank graph or a horizontal line at zero.'),
             h5('Parameter Model: If the required file is not uploaded or there are missing information, a blank graph will be shown'),
             h5('Other tables, graphs and visulizations: If required files are not uploaded or missing, nothing will be shown.')

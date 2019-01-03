@@ -596,3 +596,27 @@ plot_normalized_graph <- function(util, energy, b_name = '')
 
   return(post_point)
 }
+
+
+filter_project_session <- function(df, session, project)
+{ 
+  if (project == 'NA' | session == 'NA')
+  { 
+    return(df)
+  }else
+  { 
+    df = subset(df, df$project_id == project & df$timestamp == session)
+    return(df)
+  }
+}
+
+
+percent_heat_cool_func <- function(df)
+{ 
+  options(digits=15)
+  df$percent_cooling = 100*df$cool_load/df$total_consumption
+  df$percent_heating = 100*df$heat_load/df$total_consumption
+  df$percent_baseload = 100 - df$percent_cooling - df$percent_heating
+  df$baseload = df$total_consumption*df$percent_baseload
+  return(df)
+}

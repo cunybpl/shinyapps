@@ -5,73 +5,79 @@ library(rdrop2)
 
 server <- function(input, output, session) {
 
+  drop_df_1 <- reactive({
+    get_dropdown_info()
+    })
 
-  dd_df <- reactive({
-    get_dropdown_info_2()
+  output$sessions_ui <- renderUI({
+    tagList(
+      selectInput('sessions', 'Choose sessions', unique(drop_df_1()$timestamp), multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+    )
   })
+
+  category_vec <- reactive({
+    subset(drop_df_1()$project_id, drop_df_1()$timestamp == input$sessions)
+    })
 
   output$cat_ui <- renderUI({
     tagList(
-      selectInput('category', 'Choose Category', unique(dd_df()$category), selected = dd_df()$category[1], multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+      selectInput('category', 'Choose Category', category_vec(), multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
     )
   })
 
-
-  p_df <- reactive({
-    get_dd_date(dd_df(), input$category)
+  dir_path <- reactive({
+    subset(drop_df_1()$child_path, drop_df_1()$timestamp == input$sessions & drop_df_1()$project_id == input$category)
     })
 
-  output$point_ui<- renderUI({
-    tagList(
-      selectInput('period', 'Choose period', p_df()$p0, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
-    )
-  })
-
-
   best_model <- reactive({
-    path = subset(p_df()$path, p_df()$p0 == input$period)
-    fileName=paste("all_models_",input$category,"_",input$period,".csv",sep="")
-    df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
-    if (is.null(df))
-    {
-       fileName=paste("best_models_",input$category,"_",input$period,".csv",sep="")
-      df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
-    }
+    file_name = paste(input$category, '-best.csv', sep ='')
+    file_path = paste(dir_path(), file_name, sep ='/')
+    df = tryCatch(drop_read_csv(file_path), error = function(e){return(NULL)})
     return(df)
     })
 
   temp_df <- reactive({
-    path = subset(p_df()$path, p_df()$p0 == input$period)
-    fileName=paste("utility_",input$category,"_",input$period,".csv",sep="")
-    df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
-    return(df)
+    file_name = paste(input$category, '-combined-utility.csv', sep ='')
+    file_path = paste(dir_path(), file_name, sep ='/')
+    print(file_path)
+    df = tryCatch(drop_read_csv(file_path), error = function(e){return(NULL)})
+
+    colnames(df)[colnames(df) == 'oat'] <- 'OAT'
+    util_cols = c("normalized_usage", "noaa_temps", "adjusted_usage")
+    df = missing_cols_handler(util_cols, df)
+    df = fixed_time(df)
     })
 
-  uncertainty_df <- reactive({
-    path = subset(p_df()$path, p_df()$p0 == input$period)
-    fileName=paste("savings_uncertainty_",input$category,"_",input$period,".csv",sep="")
-    df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
-    return(df)
+  adjust_saving <- reactive({
+    file_name = paste(input$category, '-adjsavings.csv', sep = '')
+    file_path = paste(dir_path(), file_name, sep ='/')
+    df = tryCatch(drop_read_csv(file_path), error = function(e){return(NULL)})
+
+    df = missing_cols_handler(c('adjusted_pecent_savings'), df)
   })
 
-  savings_df <- reactive({
-    path = subset(p_df()$path, p_df()$p0 == input$period)
-    fileName=paste("total_savings_",input$category,"_",input$period,".csv",sep="")
-    df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
-    return(df)
+  normalized_saving <- reactive({
+    file_name = paste(input$category, '-normsavings.csv', sep = '')
+    file_path = paste(dir_path(), file_name, sep ='/')
+    df = tryCatch(drop_read_csv(file_path), error = function(e){return(NULL)})
+
+    df = missing_cols_handler(c('normalized_pecent_savings'), df)
   })
 
   post_df <- reactive({
-    path = subset(p_df()$path, p_df()$p0 == input$period)
-    fileName=paste("post_models_",input$category,"_",input$period,".csv",sep="")  # post_models_{}_{}
-    df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
-    return(df)
+    file_name = paste(input$category, '-post.csv', sep = '')
+    file_path = paste(dir_path(), file_name, sep ='/')
+    df = tryCatch(drop_read_csv(file_path), error = function(e){return(NULL)})
+
+    if(!is.null(df))
+    {
+      df = percent_heat_cool_func(df)
+    }
   })
 
   binfo_df <- reactive({
-    path = subset(p_df()$path, p_df()$p0 == input$period)
-    fileName=paste("building_info_",input$category,"_",input$period,".csv",sep="")
-    df = tryCatch(drop_read_csv(paste(path,fileName,sep="/")), error = function(e){return(NULL)})
+    load("building_info.RData", df <- new.env()) 
+    df = df$binfo_df
     return(df)
   })
 
@@ -135,102 +141,164 @@ server <- function(input, output, session) {
     b_df()$bdbid[b_df()$name == input$bdbid]
   })
 
-
-  figure <- reactive({
-    require(ggplot2)
-    temp_list = list()
-    b_name = get_building_name(binfo_df(), bdbid_n())
-    for (energy_n in c('Elec', 'Fuel'))
-    {   
-        if (flag_func(temp_df(), bdbid_n(), energy_n))
-        { 
-          util = subset(temp_df(), bdbid == bdbid_n() & energy_type == energy_n)
-          model_fig = main_plot_model(util, best_model(), bdbid_n(), energy_n, b_name)
-          adjust_fig = main_plot_baseload(util, best_model(), bdbid_n(), energy_n, b_name)
-        }else
-        {
-          model_fig = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy_n, 'for', b_name))
-          adjust_fig = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy_n, 'for', b_name))
-        }
-
-        savings = savings_table(uncertainty_df(), savings_df(),bdbid_n(), energy_n)
-
-        n = ifelse(flag_func(best_model(), bdbid_n(), energy_n), subset(best_model()$n, best_model()$bdbid == bdbid_n() & best_model()$energy_type == energy_n), 0)
-        post_output_df = post_output(post_df(), bdbid_n(), energy_n)
-        post_output_df = post_col(post_output_df, n, energy_n)
-
-        stat_df = stat_table(best_model(), bdbid_n(), energy_n)
-        params_df = params_table(best_model(), bdbid_n(), energy_n)
-
-        temp_list[[energy_n]]=list(adjust = adjust_fig, model = model_fig, savings = savings, post_output_df = post_output_df, stat_df = stat_df, params_df = params_df)
-    }
-    temp_list
-  })
   
-  output$help <- renderTable({
-    help_table()
-  }, align = 'l', colnames = TRUE, width = "550")
+  ################################################
+  ################## PREPARE FILE ################
+  ################################################
 
-  output$savings <- renderTable({
-    figure()$'Elec'$savings
-  }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
+  util_elec <- reactive({
+    if (flag_func(temp_df(), bdbid_n(), 'Elec')){
+      return(subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Elec'))
+    }
+    NULL
+    })
 
-  output$post <- renderTable({
-    figure()$'Elec'$post_output_df
-  }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
+  util_fuel <- reactive({
+    if (flag_func(temp_df(), bdbid_n(), 'Fuel')){
+      return(subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Fuel'))
+    }
+    NULL
+  })
 
-  output$stat_df <- renderTable({
-    figure()$'Elec'$stat_df
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+  elec_null_flag <- reactive({is.null(util_elec())})
 
-  output$params_df <- renderTable({
-    figure()$'Elec'$params_df
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+  fuel_null_flag <- reactive({is.null(util_fuel())})
 
+  b_name <- reactive({get_building_name(binfo_df(), bdbid_n())})
 
-  output$plot1 <- renderPlotly({figure()$'Elec'$adjust})
-  output$plot2 <- renderPlotly({figure()$'Elec'$model})
-  output$plot3 <- renderPlotly({
-    if (flag_func(temp_df(), bdbid_n(), 'Elec'))
+  ################################################
+  ################## ELEC PLOT ###################
+  ################################################
+
+  output$plot_time_elec <- renderPlotly({
+    if (elec_null_flag())
     { 
-      util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Elec')
-      plot_timeseries_2(util, 'Elec')
-    }else
-    {
       plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec')
-    }
-  })
-
-
-  output$savings2 <- renderTable({
-    figure()$'Fuel'$savings
-  }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
-
-  output$post2 <- renderTable({
-    figure()$'Fuel'$post_output_df
-  }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
-
-  output$stat_df2 <- renderTable({
-    figure()$'Fuel'$stat_df
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
-
-  output$params_df2 <- renderTable({
-    figure()$'Fuel'$params_df
-  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
-
-
-  output$plot12 <- renderPlotly({figure()$'Fuel'$adjust})
-  output$plot22 <- renderPlotly({figure()$'Fuel'$model})
-  output$plot32 <- renderPlotly({
-    if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
-    { 
-      util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Fuel')
-      plot_timeseries_2(util, 'Fuel')
     }else
     {
-      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Fuel')
+      plot_timeseries(util_elec(), 'Elec')
     }
   })
+
+  output$plot_model_elec <- renderPlotly({
+    if (elec_null_flag())
+    {
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec'))
+    }
+    main_plot_model(util_elec(), best_model(), bdbid_n(), 'Elec', b_name())
+    })
+
+  output$plot_adjust_elec <- renderPlotly({
+    if(elec_null_flag())
+    {
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec'))
+    }
+    main_plot_baseload(util_elec(), best_model(), bdbid_n(), 'Elec', b_name())
+    })
+
+  output$plot_norm_elec <- renderPlotly({
+    flag = length(util_elec()$normalized_usage[!is.na(util_elec()$normalized_usage)])
+    if(flag)
+    {
+      return(plot_normalized_graph(util_elec(), 'Elec', b_name()))
+    }
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec')
+    })
+
+  ################################################
+  ################ ELEC TABLES ###################
+  ################################################
+
+  output$post_elec <- renderTable({
+    n = ifelse(flag_func(best_model(), bdbid_n(), 'Elec'), subset(best_model()$n, best_model()$bdbid == bdbid_n() & best_model()$energy_type == 'Elec'), 0)
+    post_output_df = post_output(post_df(), bdbid_n(), 'Elec')
+    post_output_df = post_col(post_output_df, n, 'Elec')
+    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$stat_df_elec <- renderTable({
+    stat_table(best_model(), bdbid_n(), 'Elec')
+  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$params_df_elec <- renderTable({
+    params_table(best_model(), bdbid_n(), 'Elec')
+  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$norm_saving_elec <- renderTable({
+    construct_saving_table(normalized_saving(), 'Elec', bdbid_n(), 'normalized')
+  }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
+
+  output$adjust_saving_elec <- renderTable({
+    construct_saving_table(adjust_saving(), 'Elec', bdbid_n(), 'adjusted')
+  }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
+
+  ################################################
+  ################## FUEL PLOT ###################
+  ################################################
+
+  output$plot_time_fuel <- renderPlotly({
+    if (fuel_null_flag())
+    { 
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Fuel')
+    }else
+    {
+      plot_timeseries(util_fuel(), 'Fuel')
+    }
+  })
+
+  output$plot_model_fuel <- renderPlotly({
+    if (fuel_null_flag())
+    {
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Fuel'))
+    }
+    main_plot_model(util_fuel(), best_model(), bdbid_n(), 'Fuel', b_name())
+    })
+
+  output$plot_adjust_fuel <- renderPlotly({
+    if(fuel_null_flag())
+    {
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Fuel'))
+    }
+    main_plot_baseload(util_fuel(), best_model(), bdbid_n(), 'Fuel', b_name())
+    })
+
+  output$plot_norm_fuel <- renderPlotly({
+    flag = length(util_fuel()$normalized_usage[!is.na(util_fuel()$normalized_usage)])
+    if(flag)
+    {
+      return(plot_normalized_graph(util_fuel(), 'Fuel', b_name()))
+    }
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Fuel')
+    })
+
+  ################################################
+  ################ FUEL TABLES ###################
+  ################################################
+
+  output$post_fuel <- renderTable({
+    n = ifelse(flag_func(best_model(), bdbid_n(), 'Fuel'), subset(best_model()$n, best_model()$bdbid == bdbid_n() & best_model()$energy_type == 'Fuel'), 0)
+    post_output_df = post_output(post_df(), bdbid_n(), 'Fuel')
+    post_output_df = post_col(post_output_df, n, 'Fuel')
+    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$stat_df_fuel <- renderTable({
+    stat_table(best_model(), bdbid_n(), 'Fuel')
+  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$params_df_fuel <- renderTable({
+    params_table(best_model(), bdbid_n(), 'Fuel')
+  }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$norm_saving_fuel <- renderTable({
+    construct_saving_table(normalized_saving(), 'Fuel', bdbid_n(), 'normalized')
+  }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
+
+  output$adjust_saving_fuel <- renderTable({
+    construct_saving_table(adjust_saving(), 'Fuel', bdbid_n(), 'adjusted')
+  }, align = 'c', colnames = TRUE, width = "auto", digits = 7)
+
+  ################################################
+  ############### multi plots ####################
+  ################################################
 
   output$plots <- renderUI({
     plot_output_list <- lapply(1:length(unique(temp_df()$bdbid)), function(i) {
@@ -298,5 +366,30 @@ server <- function(input, output, session) {
 
     do.call(tagList, plot_output_list)
   })
+  
+
+  ##############################################
+  ########## BUILDING INFO AND HELP ############
+  ##############################################
+
+  output$binfo_df1 <- renderTable({
+    binfo_output_list()$binfo_df1
+  }, align = 'l', colnames = FALSE, width = "auto")
+
+  output$binfo_df2 <- renderTable({
+    binfo_output_list()$binfo_df2
+  }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
+
+  output$binfo_df12 <- renderTable({
+    binfo_output_list()$binfo_df1
+  }, align = 'l', colnames = FALSE, width = "auto")
+
+  output$binfo_df22 <- renderTable({
+    binfo_output_list()$binfo_df2
+  }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
+
+  output$help <- renderTable({
+    help_table()
+  }, align = 'l', colnames = TRUE, width = "550")
 
 }
