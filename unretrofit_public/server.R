@@ -219,6 +219,13 @@ server <- function(input, output, session) {
     co2_value_get(breakdown_df(), bdbid_n())
   })
 
+  binfo_output_df2 <- reactive({
+    binfo_df2 = binfo_output_list()$binfo_df2
+    binfo_df2[3,] = round(as.numeric(binfo_df2[3,]), 2)
+    binfo_df2[3,] = prettyNum(binfo_df2[3,], big.mark = ",", format = 'f')
+    binfo_df2
+  })
+
   #############################################
   ################# ELEC OUTPUT ###############
   #############################################
@@ -228,9 +235,8 @@ server <- function(input, output, session) {
   }, align = 'l', colnames = FALSE, width = "auto")
 
   output$elec_binfo_df2 <- renderTable({
-    binfo_output_list()$binfo_df2
+    binfo_output_df2()
   }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
-
 
   #timeseries
   output$elec_timeseries <- renderPlotly({
@@ -316,7 +322,7 @@ server <- function(input, output, session) {
   }, align = 'l', colnames = FALSE, width = "auto")
 
   output$fuel_binfo_df2 <- renderTable({
-    binfo_output_list()$binfo_df2
+    binfo_output_df2()
   }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
 
   #timeseries

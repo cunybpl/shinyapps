@@ -102,6 +102,14 @@ params_table <- function(best_model, bdbid, energy)
   {
     pl = params_list(best_model, bdbid, energy, 1)
     df = data.frame(Model = as.character(pl$model), Ycp = pl$Ycp, cp1 = pl$cp1, cp2 = pl$cp2, slope1 = pl$slope1, Slope2 = pl$slope2)
+    df[,3:4] = as.character(round(df[,3:4], 2))
+    if (df$Model == '3PC')
+    {
+      colnames(df)[5:6] = c('Cooling Sensitivity','Heating Sensitivity')
+    }else
+    {
+      colnames(df)[5:6] = c('Heating Sensitivity','Cooling Sensitivity')
+    }
   }else
   {
     df = data.frame(NULL)
@@ -250,6 +258,7 @@ stat_table <- function(best_model, bdbid_n, energy_n)
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'n')]
+    df[,6:7] = as.character(round(df[,6:7], 2))
   }else
   {
     df = data.frame(NULL)
@@ -457,12 +466,12 @@ elec_fuel_graph_func <- function(temp_df, best_model, bdbid_n, b_name = "", heig
       unit = switch(energy, 'Elec' = TRUE, 'Fuel' = FALSE)
 
 
-      p = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name, unit, p)
+      p = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name, unit_usage, unit, p)
     }
     return(p)
 }
 
-plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit = FALSE)
+plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit_usage, unit = FALSE)
 { 
 
   if (unit)
@@ -475,11 +484,11 @@ plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit = FALSE
 
   switch(energy, 'Elec' = {
     color_n = 'rgba(51, 113, 213, 1)'
-    y_title = "Usage (kWh)"
+    y_title = paste('Usage(kWh',unit_usage, sep ='')
     },
     'Fuel' = {
     color_n = 'rgba(240, 24, 28,1)'
-    y_title = "Usage (BTU)"
+    y_title =  paste('Usage(BTU',unit_usage, sep ='')
     }
   )
 
@@ -503,7 +512,7 @@ plot_timeseries <- function(util, energy)
   options(digits=15)
   util$estimated = ifelse(util$estimated == 1, 'Est', 'Act')
 
-  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
+  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/day)", "/sqft/day)")
 
   util_act = subset(util, util$estimated == 'Act')
   util_est = subset(util, util$estimated == 'Est')
@@ -608,6 +617,8 @@ main_plot <- function(temp_df, best_model, bdbid_n, energy, b_name = "")
     util$estimated[util$estimated == 1] <- 'Est'
     util$estimated[util$estimated != 'Est'] <- 'Act'
 
+    unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
+
     df1 = data.frame(x = util$OAT, y = util$usage, z = util$estimated) #ready for point plot
 
     if (bdbid_n %in% unique(best_model$bdbid)) #bdbid is in best_model
@@ -616,14 +627,14 @@ main_plot <- function(temp_df, best_model, bdbid_n, energy, b_name = "")
 
       if(energy %in% best_energy_type) #energy and bdbid is in util and best
       {
-        final_figure = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name)
+        final_figure = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name, unit_usage)
       }else #if FALSE, it means energy is not in best model so just point plot
       {
-        final_figure = plot_point_2(df1, energy, b_name = b_name)
+        final_figure = plot_point_2(df1, energy, b_name = b_name, unit_usage = unit_usage)
       }
     }else #if FALSE, it means bdbid does not make it to best_model so just point plot
     {
-      final_figure = plot_point_2(df1, energy, b_name = b_name)
+      final_figure = plot_point_2(df1, energy, b_name = b_name, unit_usage = unit_usage)
     }
   }else #if FALSE, it means energy is not in util frame so empty plot
   { 
@@ -632,14 +643,14 @@ main_plot <- function(temp_df, best_model, bdbid_n, energy, b_name = "")
   return(final_figure)
 }
 
-main_line_point_plot <- function(df1, best_model, bdbid_n, energy, b_name, unit = FALSE, p_init = plot_ly())
+main_line_point_plot <- function(df1, best_model, bdbid_n, energy, b_name, unit_usage, unit = FALSE, p_init = plot_ly())
 {
   params = params_list(best_model, bdbid_n, energy, 1)
   B = params_matrix(params)
   x1 = df1$x
 
   model_fig = plot_model(x1, params$model, B, params$cp1, params$cp2, energy, unit, p_init)
-  final_figure = plot_point_2(df1, energy, model_fig, b_name, unit)
+  final_figure = plot_point_2(df1, energy, model_fig, b_name, unit_usage, unit)
 
   return(final_figure)
 }
@@ -679,6 +690,8 @@ binfo_table <- function(binfo_df, bdbid_n)
   binfo_df1 = t(data.frame(bdbid = b_id, name = binfo_df$building_name, address = binfo_df$address, location = location))
   binfo_df2 = t(data.frame(agency = binfo_df$oper_agency_acronym, primary = binfo_df$epapm_primary_function, area = binfo_df$total_bldg_gross_sq_ft))
   rownames(binfo_df2) = c('Agency', 'Primary Function', 'Gross Square Feet')
+  #binfo_df2[3,] = round(as.numeric(binfo_df2[3,]), 2)
+  #binfo_df2[3,] = prettyNum(binfo_df2[3,], big.mark = ",", format = 'f')
   return(list(binfo_df1 = binfo_df1, binfo_df2 = binfo_df2))
 }
 
@@ -708,7 +721,7 @@ sqft_message <- function(sqft_col)
     message = switch(as.character(sqft_vec),
       "1" = "Energy usage is normalized by sqft.",
       "0" = "Energy usage is not normalized by sqft.",
-      "No information avaliable for this facility regarding energy usage being normalized by sqft."
+      "No information avaliable for this facility regarding energy usage being normalized by sqft. Default to assume it is normalized."
       )
   }else
   {
@@ -830,6 +843,13 @@ make_break_table <- function(df)
 {
   df = df[, c('epa_energy_type','reported_consumption_unit', 'reported_site_energy', 'reported_source_energy')]
   colnames(df) = c('EPA Energy Type', 'Unit','Reported Site Energy', 'Reported Source Energy')
+
+  df$'Reported Site Energy' = round(as.numeric(df$'Reported Site Energy'), 2)
+  df$'Reported Site Energy' = prettyNum(df$'Reported Site Energy', big.mark = ",", format = 'f')
+
+  df$'Reported Source Energy' = round(as.numeric(df$'Reported Source Energy'), 2)
+  df$'Reported Source Energy' = prettyNum(df$'Reported Source Energy', big.mark = ",", format = 'f')
+
   return(df)
 }
 

@@ -568,7 +568,7 @@ plot_point_3 <- function(df, key, model_fig = plot_ly(), b_name)
     point_fig = add_trace(p = point_fig_act, x = ~util_est$x, y = ~util_est$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(51, 113, 213, 1)', size = 9), name = 'Elec Est', inherit = FALSE)%>%
     layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
       xaxis = list(title = "Temperature"),
-      yaxis = list(title = "Usage (kWh)"))
+      yaxis = list(title = "Usage (kWh/sqft/day)"))
   }else if (key == 'fuel')
   {
     #point_fig = geom_point(data = df, aes(x = x, y= y, shape= factor(z), color = 'Fuel Consumption'))
@@ -581,7 +581,7 @@ plot_point_3 <- function(df, key, model_fig = plot_ly(), b_name)
     point_fig = add_trace(p = point_fig_act, x = ~util_est$x, y = ~util_est$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(240, 24, 28,1)', size = 9), name = 'Fuel Est', inherit = FALSE)%>%
     layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
       xaxis = list(title = "Temperature"),
-      yaxis = list(title = "Usage (BTU)"))
+      yaxis = list(title = "Usage (BTU/sqft/day)"))
   }else
   {
     point_fig = geom_point(data = df, aes(x = x, y= y, color = 'retofit_act'))
@@ -613,7 +613,7 @@ plot_timeseries_2 <- function(util, energy)
       add_trace(x = ~util_est$end_date, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(51, 113, 213, 1)', size = 9), name = 'Est') %>%
       add_trace(x = ~util_act$end_date, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = 'rgba(51, 113, 213, 1)', size = 9), name = 'Act') %>%
       layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage(kWh/sq/month)'), margin = list(b = 100),
+      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage(kWh/sq/day)'), margin = list(b = 100),
       xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date)
     )
   }else
@@ -624,7 +624,7 @@ plot_timeseries_2 <- function(util, energy)
       add_trace(x = ~util_est$end_date, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(240, 24, 28,1)', size = 9), name = 'Est') %>%
       add_trace(x = ~util_act$end_date, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = 'rgba(240, 24, 28,1)', size = 9), name = 'Act') %>%
       layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage(BTU/sqft/month)'), margin = list(b = 100),
+      title = "Time Series", yaxis2 = ay, yaxis = list(title='Usage(BTU/sqft/day)'), margin = list(b = 100),
       xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date)
     )
   }

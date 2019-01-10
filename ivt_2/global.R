@@ -45,7 +45,7 @@ count_func <- function(df, interval)
 
   approx_msg = 'Data are missing for the following date(s) and time(s).'
   
-  if(length(approx_df))
+  if(!(length(approx_df)))
   {
     approx_msg = 'No missing data. No data points are approximated.' 
   }

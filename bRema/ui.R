@@ -3,7 +3,7 @@ library(plotly)
 library(lubridate)
 
 library(devtools)
-install_github('cunybpl/bRema')
+#install_github('cunybpl/bRema')
 library(bRema)
 
 ui <- fluidPage(

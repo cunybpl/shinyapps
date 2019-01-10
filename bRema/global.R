@@ -8,7 +8,7 @@ library(lubridate)
 #}
 
 library(devtools)
-install_github('cunybpl/bRema')
+#install_github('cunybpl/bRema')
 library(bRema)
 
 result_table <- function(result, model)

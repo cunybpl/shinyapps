@@ -77,7 +77,7 @@ server <- function(input, output){
 
   	output$year_id <- renderUI({
 	    tagList(
-	      selectInput('year', 'Choose year Type', unique(inter_df()$year), selected = NULL, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+	      selectInput('year', 'Choose year', unique(inter_df()$year), selected = NULL, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
 	    )
   	})
 

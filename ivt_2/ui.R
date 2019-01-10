@@ -13,7 +13,6 @@ ui <- fluidPage(
     tabsetPanel(
         tabPanel("App Info",
             br(),
-            h5("All graphs in this shiny app are created using plotly. This message is not sponsored by plotly. I just do not like matplotlib."),
             h3("File Requirement"),
             tableOutput('data_req_df'),
             br(),
@@ -64,13 +63,6 @@ ui <- fluidPage(
           plotlyOutput('color_heat_plot', height = '100px', width = '500px'),
           plotlyOutput('all_weekload_plot_3d'),
           br()
-          ),
-        tabPanel('Msg To Tanya',
-          br(),
-          img(src='plotly.gif', align = "center"),
-          br(),
-          br(),
-          img(src='matplotlib.gif', align = "center")
           )
     )
   )
