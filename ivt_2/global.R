@@ -22,46 +22,37 @@ prepare_data_func <- function(df)
 
 #use inter_df resulted from calc_usage_func
 count_func <- function(df, interval)
-{	
-	date_vec = strptime(unique(df$y_m_d), format = "%Y-%m-%d")
-	temp_hour_df = subset(df, !is.na(df$demand))
-	length_temp = nrow(temp_hour_df)
-	length_org = nrow(df)
-	temp_hour_count = interval*length_temp
-	total_hour_count = interval*length_org
-	approx_hour = total_hour_count - temp_hour_count
+{ 
+  date_vec = strptime(unique(df$y_m_d), format = "%Y-%m-%d")
+  temp_hour_df = subset(df, !is.na(df$demand))
+  length_temp = nrow(temp_hour_df)
+  length_org = nrow(df)
+  temp_hour_count = interval*length_temp
+  total_hour_count = interval*length_org
+  approx_hour = total_hour_count - temp_hour_count
   date_count = length(date_vec)
 
   not_weekday_count = length(date_vec[is.holiday(date_vec) | is.weekend(date_vec)])
   weekday_count = date_count - not_weekday_count
 
-	hour_df = data.frame(total_hour_count = total_hour_count, approx_hour_count = approx_hour)
-  colnames(hour_df) = c('Total Hour Count', 'Approx Hour Count')
+  approx_df = data.frame(total_points = nrow(df), approx_point = length(subset(df$date, is.na(df$demand))))
+  colnames(approx_df) = c('Number of Points', 'Number of Interpolated Points')
 
-  day_df = data.frame(weekday_count = weekday_count, not_weekday_count = not_weekday_count)
-  colnames(day_df) = c('Weekday Count', 'Weekend or Holiday Count')
+  data_count_df = data.frame(hour = total_hour_count, day = weekday_count, weekend = not_weekday_count)
+  colnames(data_count_df) = c('Number of Hours', 'Number of Weekday', 'Number of Weekend Days or Holidays')
 
-  approx_df = data.frame(approx_date = subset(df$date, is.na(df$demand)))
 
-  approx_msg = 'Data are missing for the following date(s) and time(s).'
-  
-  if(!(length(approx_df)))
-  {
-    approx_msg = 'No missing data. No data points are approximated.' 
-  }
-
-  approx_df$approx_date = strftime(approx_df$approx_date)
-  colnames(approx_df) = c('Approx Time')
-
-	return(list(hour_df = hour_df, approx_df = approx_df, day_df = day_df, approx_msg = approx_msg))
+  return(list(approx_df = approx_df, data_count_df = data_count_df))
 }
 
 calc_usage_func <- function(df, interval)
-{
+{ 
 	temp = df %>% mutate(approx = na.approx(demand, na.rm = FALSE))
 	df$approx = temp$approx
 	df$usage = df$demand * interval
-	return(df)
+  df = subset(df, !is.na(df$approx))
+  final_na_point = nrow(subset(df, is.na(df$approx)))
+	return(list(df = df, final_na_point = final_na_point))
 }
 
 plot_weekly <- function(year_df, week_i, interval = NULL)
@@ -127,6 +118,7 @@ calc_mean_sd_func <- function(df)
   temp$lower_lim = temp$avg - temp$error
   temp$weekday_num = as.numeric(temp$weekday)
   temp$index_hour = temp$hour + (temp$weekday_num - 1)*24
+  #temp$index_hour = paste(temp$weekday, temp$hour)
   return(temp)
 }
 
@@ -135,8 +127,8 @@ plot_ci_func <- function(mean_df, p_init, weekday_n)
 
   color = color_maker_func(weekday_n)
 
-  p_inter = p_init %>% add_trace(data = subset(mean_df, mean_df$weekday == weekday_n), x = ~index_hour, y = ~upper_lim, type = 'scatter', mode = 'lines', line = list(color = color$color_n), showlegend = FALSE) %>%
-    add_trace(data = subset(mean_df, mean_df$weekday == weekday_n), x = ~index_hour, y = ~lower_lim, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = color$color_t, line = list(color = color$color_n),
+  p_inter = p_init %>% add_trace(data = subset(mean_df, mean_df$weekday == weekday_n), x = ~index_hour, y = ~upper_lim, type = 'scatter', mode = 'lines', hoverinfo = 'skip', line = list(color = color$color_n), showlegend = FALSE) %>%
+    add_trace(data = subset(mean_df, mean_df$weekday == weekday_n), x = ~index_hour, y = ~lower_lim, type = 'scatter', mode = 'lines', fill = 'tonexty', hoverinfo = 'skip', fillcolor = color$color_t, line = list(color = color$color_n),
             showlegend = FALSE)
   return(p_inter)
 }
@@ -144,13 +136,13 @@ plot_ci_func <- function(mean_df, p_init, weekday_n)
 color_maker_func <- function(weekday_n)
 {
    color_n = switch(as.character(weekday_n),
-          'Sun' = 'rgba(77,0,86,1)',
-          'Mon' = 'rgba(73,46,135,1)',
-          'Tue' = 'rgba(25,104,145,1)',
-          'Wed' = 'rgba(0,149,142,1)',
-          'Thu' = 'rgba(0,191,119,1)',
-          'Fri' = 'rgba(113,225,41,1)',
-          'Sat' = 'rgba(255,236,0,1)'
+          'Sun' = 'rgba(77,0,86,0.7)',
+          'Mon' = 'rgba(73,46,135,0.7)',
+          'Tue' = 'rgba(25,104,145,0.7)',
+          'Wed' = 'rgba(0,149,142,0.7)',
+          'Thu' = 'rgba(0,191,119,0.7)',
+          'Fri' = 'rgba(113,225,41,0.7)',
+          'Sat' = 'rgba(255,236,0,0.7)'
           )
 
   color_t = switch(as.character(weekday_n),
@@ -167,9 +159,10 @@ color_maker_func <- function(weekday_n)
 
 
 main_plot_ci <- function(mean_df)
-{
+{ 
+  text_x = c('Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon')
   p1 = add_trace(p = plot_ly(), x = ~mean_df$index_hour, y = ~mean_df$avg, type = 'scatter', mode = 'lines', color = ~mean_df$weekday) %>%
-      layout(title = 'Avg Weekly load', xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE), yaxis = list(title = 'Demand', zeroline = FALSE, showline = FALSE, rangemode = 'tozero'))
+      layout(title = 'Average Weekly Load', margin = list(b = 100), xaxis = list(title = 'Time of Day', zeroline = FALSE, showline = FALSE, tickmode = 'array', tickvals = c(0:13)*12, ticktext = text_x, tickangle = -45), yaxis = list(title = 'Demand (kW)', zeroline = FALSE, showline = FALSE, rangemode = 'tozero'))
   for (i in c('Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'))
   {
     p1 = plot_ci_func(mean_df, p1, i)
@@ -215,6 +208,8 @@ make_whole_week_oat_plot_3d <- function(df, week_i, p_init, color_n)
 main_whole_week_oat_plot <- function(df, agg_oat, flag_3d = FALSE)
 { 
 
+  text_x = c('Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon', 'Midnight', 'Noon')
+
   df$weekday_num = as.numeric(df$weekday)
   df$index_hour = df$hour_point + (df$weekday_num - 1)*24
   df$week_year = paste('Week ', df$week_number, ', ', df$year, sep = '')
@@ -231,7 +226,7 @@ main_whole_week_oat_plot <- function(df, agg_oat, flag_3d = FALSE)
   { 
     color_n = subset(agg_oat$color_vec, agg_oat$week_year == i)
     p_3d = make_whole_week_oat_plot_3d(df, i, p_3d, color_n) %>% layout(title = '3D Weekly Load Profile', scene = list(xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Week', zeroline = FALSE, showline = FALSE), zaxis = list(title= 'Demand (kW)')))
-    p_2d = make_whole_week_oat_plot(df, i, p_2d, color_n) %>% layout(title = 'Weekly Load Profile', xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Demand (kW)', zeroline = FALSE, showline = FALSE, rangemode = 'tozero'))
+    p_2d = make_whole_week_oat_plot(df, i, p_2d, color_n) %>% layout(title = 'Weekly Load Profile', margin = list(b = 100), xaxis = list(title = 'Time of Day', zeroline = FALSE, showline = FALSE, tickmode = 'array', tickvals = c(0:13)*12, ticktext = text_x, tickangle = -45),yaxis = list(title= 'Demand (kW)', zeroline = FALSE, showline = FALSE, rangemode = 'tozero'))
   }
   return(list(p_2d = p_2d, p_3d = p_3d, p_color = p_color))
 }

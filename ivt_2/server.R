@@ -49,17 +49,23 @@ server <- function(input, output){
       abs(temp_df()$hour_point[2] - temp_df()$hour_point[1])
       })
 
-  	inter_df <- reactive({
+  	inter_df_list <- reactive({
   		if(inter_null())
   		{
   			return(NULL)
   		}
   		df = temp_df()[,c('date', input$meter, 'y_m_d', 'year', 'week_number', 'date', 'hour','hour_point','weekday','weekday_flag')]
   		colnames(df)[colnames(df) == input$meter] <-  'demand'
-  		df = calc_usage_func(df, interval_n())
+  		calc_list = calc_usage_func(df, interval_n())
+      df = calc_list$df
+
   		df$demand = as.numeric(df$demand)
-  		df
+  		list(df = df, final_na_point = calc_list$final_na)
   	})
+
+    inter_df <- reactive({inter_df_list()$df})
+
+    final_na_point <- reactive({inter_df_list()$final_na_point})
 
     mean_df <- reactive({
       calc_mean_sd_func(inter_df())
@@ -169,21 +175,29 @@ server <- function(input, output){
     weekly_plot_list()$p_color
     })
 
+  output$color_heat_plot2 <- renderPlotly({
+    weekly_plot_list()$p_color
+    })
+
   output$count_header <- renderText({
     paste('Data Information For Meter:', input$meter)
     })
 
-  output$day_count <- renderTable({
-    cout_df()$day_df
-    }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
+  output$na_point_note <- renderText({
+    ''
+    if(final_na_point())
+    {
+      paste(final_na_point(), 'points at the end of data sets are not interpolated.')
+    }
+    })
 
-  output$hour_count <- renderTable({
-    cout_df()$hour_df
-    }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
+  output$data_count_df <- renderTable({
+    cout_df()$data_count_df
+    }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
-  output$approx_count <- renderTable({
+  output$approx_count_df <- renderTable({
     cout_df()$approx_df
-    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = NULL)
+    }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
   output$data_req_df <- renderTable({
     make_data_req_table()
