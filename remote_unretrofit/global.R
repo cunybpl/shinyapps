@@ -128,6 +128,30 @@ params_table <- function(best_model, bdbid, energy)
   {
     pl = params_list(best_model, bdbid, energy, 1)
     df = data.frame(Model = as.character(pl$model), Ycp = pl$Ycp, cp1 = pl$cp1, cp2 = pl$cp2, slope1 = pl$slope1, Slope2 = pl$slope2)
+    df[,3:4] = as.character(round(df[,3:4], 2))
+    if (df$Model == '3PC')
+    {
+      colnames(df)[5:6] = c('Cooling Sensitivity','Heating Sensitivity')
+    }else
+    {
+      colnames(df)[5:6] = c('Heating Sensitivity','Cooling Sensitivity')
+      if (energy == 'Elec')
+      {
+        colnames(df)[5:6] = c('Cooling Sensitivity','Heating Sensitivity')
+      }
+    }
+    
+    if(df$Model == '5P')
+    {
+      colnames(df)[3:4] = c('Heating Change-point', 'Cooling Change-point')
+    }else if(df$Model == '2P')
+    {
+      df = df[,c(1,2,5,6)]
+    }else
+    {
+      df = df[,c(1,2,3,5,6)]
+      colnames(df)[3] = 'Change-point'
+    }
   }else
   {
     df = data.frame(NULL)
@@ -313,6 +337,7 @@ stat_table <- function(best_model, bdbid_n, energy_n)
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'n')]
+    df[,6:7] = as.character(round(df[,6:7], 2))
   }else
   {
     df = data.frame(NULL)
@@ -345,6 +370,7 @@ co2_breakdown <- function(breakdown_df, bdbid_n)
     breakdown = round(subset(breakdown_df$co2_emissions_metric_tons, breakdown_df$bdbid == bdbid_n),2)
     breakdown_table = data.frame(breakdown = breakdown)
     rownames(breakdown_table) = c('CO2e Emissions Metric Tons')
+    breakdown_table[,1] = as.character(round(breakdown_table[,1], 2))
   }else
   {
     breakdown_table = data.frame()

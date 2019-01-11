@@ -83,7 +83,6 @@ ui <- fluidPage(
             plotlyOutput('plot3'),
             h3("Parameter Model Graph", align = "center"),
             plotlyOutput('plot2'),
-            span(textOutput('elec_sqft')),
             br(),
             tableOutput('params_df'),
             br(),
@@ -115,7 +114,6 @@ ui <- fluidPage(
             plotlyOutput('plot32'),
             h3("Parameter Model Graph", align = "center"),
             plotlyOutput('plot22'),
-            span(textOutput('fuel_sqft')),
             br(),
             fluidRow(
                 column(6, tableOutput('params_df2')),

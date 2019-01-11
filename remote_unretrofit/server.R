@@ -26,7 +26,7 @@ server <- function(input, output, session) {
 
   output$point_ui<- renderUI({
     tagList(
-      selectInput('period', 'Choose period', p_df()$p1, selected = subset(p_df()$p1, p_df()$p1 == 24), multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+      selectInput('period', 'Choose period', c(24), selected = subset(p_df()$p1, p_df()$p1 == 24), multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
     )
   })
 
@@ -220,6 +220,13 @@ server <- function(input, output, session) {
     }
     temp_list
   })
+
+  binfo_output_df2 <- reactive({
+    binfo_df2 = binfo_output_list()$binfo_df2
+    binfo_df2[3,] = round(as.numeric(binfo_df2[3,]), 2)
+    binfo_df2[3,] = prettyNum(binfo_df2[3,], big.mark = ",", format = 'f')
+    binfo_df2
+  })
   
   output$help <- renderTable({
     help_table()
@@ -230,7 +237,7 @@ server <- function(input, output, session) {
   }, align = 'l', colnames = FALSE, width = "auto")
 
   output$binfo_df2 <- renderTable({
-    binfo_output_list()$binfo_df2
+    binfo_output_df2()
   }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
 
 
@@ -313,7 +320,7 @@ server <- function(input, output, session) {
   }, align = 'l', colnames = FALSE, width = "auto")
 
   output$binfo_df22 <- renderTable({
-    binfo_output_list()$binfo_df2
+    binfo_output_df2()
   }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
 
   output$co2_df2 <- renderTable({

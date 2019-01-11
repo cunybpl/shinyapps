@@ -109,6 +109,22 @@ params_table <- function(best_model, bdbid, energy)
     }else
     {
       colnames(df)[5:6] = c('Heating Sensitivity','Cooling Sensitivity')
+      if (energy == 'Elec')
+      {
+        colnames(df)[5:6] = c('Cooling Sensitivity','Heating Sensitivity')
+      }
+    }
+    
+    if(df$Model == '5P')
+    {
+      colnames(df)[3:4] = c('Heating Change-point', 'Cooling Change-point')
+    }else if(df$Model == '2P')
+    {
+      df = df[,c(1,2,5,6)]
+    }else
+    {
+      df = df[,c(1,2,3,5,6)]
+      colnames(df)[3] = 'Change-point'
     }
   }else
   {
