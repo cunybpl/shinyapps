@@ -7,7 +7,9 @@ library(plyr)
 prepare_data_func <- function(df)
 {
 	#df$date = strptime(df$date, format = "%Y-%m-%d %H:%M")
+  df = main_dup(df)
 	df$date = fixed_time(df$date)
+  df = df[order(df$date),]
   df$y_m_d = strftime(df$date, format = "%Y-%m-%d")
 	df$year = year(df$date)
 	df$week_number = strftime(df$y_m_d, format = "%U")
@@ -63,7 +65,7 @@ plot_weekly <- function(year_df, week_i, interval = NULL)
 	  week_name = paste('(Week ', week_i, ')', sep ='')
 	  graph_title = paste(temp_week_df$y_m_d[1], '-', temp_week_df$y_m_d[nrow(temp_week_df)], week_name)
 	  p1 = add_trace(p = plot_ly(), x = ~temp_week_df$hour_point, y = ~temp_week_df$usage, type ='scatter', mode = 'lines', color = ~temp_week_df$weekday) %>%
-	        layout(title = graph_title, xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Demand (kW)', zeroline = FALSE, showline = FALSE))
+	        layout(title = graph_title, xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Usage (kWh)', zeroline = FALSE, showline = FALSE))
 	  p1 = add_trace( p = p1, x = ~approx_week_df$hour_point, y = ~approx_week_df$usage, type ='scatter', mode = 'lines', line = list(dash = 'dash'), color = ~approx_week_df$weekday)
 }
 
@@ -179,7 +181,7 @@ plot_timeseries_agg_func <- function(oat_df, df, agg_oat, agg_df){
       type = "scatter", mode = "lines", line = list(color = "rgba(243, 154, 36, 1)", width = 5), 
       name = "Weekly Avg OAT", yaxis = "y2") %>% add_trace( x = ~df$date, 
       y = ~df$approx, type = "scatter", mode = "lines", line = list(color = "rgba(51, 113, 213, 0.9)", width = 0.7), 
-      name = "Usage") %>% add_trace(x = ~agg_df$date, y = ~agg_df$approx, type = 'scatter', mode = 'lines', line = list(width = 5, color = 'rgba(51, 113, 213, 1)'), name = 'Weekly Average') %>%
+      name = "Demand") %>% add_trace(x = ~agg_df$date, y = ~agg_df$approx, type = 'scatter', mode = 'lines', line = list(width = 5, color = 'rgba(51, 113, 213, 1)'), name = 'Weekly Average') %>%
       layout(title = "Time Series", 
       yaxis2 = ay, yaxis = list(title = "Demand (kW)"), margin = list(b = 100), 
       xaxis = list(type = "date", title = "Date"))
@@ -244,7 +246,7 @@ make_color_heat_bar <- function(agg_oat)
 
 make_data_req_table <- function()
 {
-  output_vec = c('Data Information Tables', 'Weekly Usage Graphs', 'Timeseries', 'Average Weekly Load Graph', 'Weekly Load Profile Graph (2D and 3D)')
+  output_vec = c('Data Information Tables', 'Daily Usage Graphs', 'Time series', 'Average Weekly Load Graph', 'Weekly Load Profile Graph (2D and 3D)')
   input_vec = c('Interval Data CSV', 'Interval Data CSV', 'Interval Data and Temperature CSV', 'Interval Data CSV', 'Interval Data and Temperature CSV')
   df = data.frame(Output = output_vec, Input = input_vec)
   colnames(df) = c('Graphs and Tables','Input Files')
@@ -262,4 +264,32 @@ fixed_time <- function(date_vec)
   }
 
   return(date_vec)
+}
+
+dup_fixer <- function(df, dup)
+{
+  meter = colnames(df)[colnames(df) != 'date']
+  dup_df = subset(df, df$date %in% dup)
+  avg_df = aggregate(dup_df[, meter], by = list(date = dup_df$date), mean, na.rm = TRUE)
+  if (length(meter) == 1){
+    colnames(avg_df) = c('date', meter)
+  }
+
+  df_duff = df[!(duplicated(df$date)),]
+  row.names(df_duff) = c(1:nrow(df_duff))
+  dup_row = as.numeric(row.names(subset(df_duff, df_duff$date %in% avg_df$date)))
+  for (i in meter){
+    df_duff[dup_row, i] = avg_df[, i]
+  }
+  df_duff[is.na(df_duff)] = NA
+  return(df_duff)
+
+}
+
+main_dup <- function(df){
+  dup = df[duplicated(df$date), ]$date
+  if (length(dup)){
+    df = dup_fixer(df, dup)
+  }
+  return(df)
 }

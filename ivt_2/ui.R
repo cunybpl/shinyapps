@@ -40,8 +40,8 @@ ui <- fluidPage(
           span(textOutput('na_point_note'), size = '24pt'),
           tableOutput('data_count_df')
           ),
-        tabPanel("Daily Load Profile Graph",
-            h3("Daily Load Profile Per Week", align = "center"),
+        tabPanel("Daily Usage Graphs",
+            h3("Daily Usage Per Week", align = "center"),
             br(),
             uiOutput('elec_multi_plot'),
             br()
