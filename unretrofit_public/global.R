@@ -274,7 +274,7 @@ stat_table <- function(best_model, bdbid_n, energy_n)
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'n')]
-    df[,6:7] = as.character(round(df[,6:7], 2))
+    df[,6:7] = as.character(round(as.numeric(df[,6:7]), 2))
   }else
   {
     df = data.frame(NULL)
