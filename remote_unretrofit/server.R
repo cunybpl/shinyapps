@@ -101,18 +101,23 @@ server <- function(input, output, session) {
 
 
   b_df <- reactive({
+
+    if(length(unique(temp_df()$bdbid)) < length(unique(co2eui_df()$bdbid))){
+        df = co2eui_df()
+    }else
+    {
+        df = temp_df()
+    }
+
     if(!is.null(binfo_df()))
-    { 
-      #temp_index = unique(match(temp_df()$bdbid, binfo_df()$bdbid))
-      #b_name = binfo_df()$building_name[temp_index]
-      #b_id = binfo_df()$bdbid[temp_index]
-      #comb = paste(b_id, b_name, sep = ' - ')
-      b_df = construct_bdbid_name_func(temp_df(), binfo_df())
+    {  
+      b_df = construct_bdbid_name_func(df, binfo_df())
     }else
     { 
-      bdbid = unique(temp_df()$bdbid)
+      bdbid = unique(df$bdbid)
       b_df = data.frame(bdbid = bdbid, name = bdbid)
     }
+    
     b_df
   })
 
