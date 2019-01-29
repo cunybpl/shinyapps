@@ -1087,3 +1087,22 @@ construct_bdbid_name_func <- function(temp_df, binfo_df)
   return(b_df)
 }
 
+building_comparison_graph <- function(df, binfo)
+{ 
+  b_name = subset(binfo$name, binfo$bdbid %in% df$bdbid)
+  df =  subset(df, df$bdbid %in% binfo$bdbid)
+  print(length(b_name))
+  print(length(df$bdbid))
+  p_init = plot_ly()
+  p = add_trace(p = p_init, x = df$sq_ft, y = df$site_eui, type ='scatter', mode ='markers', text = b_name, hoverinfo = 'x+y+text',
+    marker = list(symbol = 'circle', color = 'rgba(176,220,175,1)', size = 9, line = list(color = 'rgba(164,165,164,1)', width = 1)), name = 'blah', inherit = FALSE) %>%
+  layout(title = 'Buliding Comparison',
+    xaxis = list(title = "Property Size (sqft)",
+                      showticklabels = TRUE,
+                      zeroline = TRUE, rangemode = 'tozero'),
+         yaxis = list(title = "EUI (kBTU/sqft)",
+                      showticklabels = TRUE,
+                      zeroline = TRUE, rangemode = 'tozero'))
+  return(p)
+}
+

@@ -156,7 +156,10 @@ ui <- fluidPage(
             uiOutput('plots2')),
         tabPanel('Multi ElecFuel',
             br(),
-            uiOutput('plots3'))
+            uiOutput('plots3')),
+        tabPanel('Building Comparison',
+          br(),
+          plotlyOutput('b_comp_plot'))
     )
   )
 )

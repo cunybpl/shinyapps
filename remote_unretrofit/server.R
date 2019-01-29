@@ -350,6 +350,10 @@ server <- function(input, output, session) {
       }
     })
 
+  output$b_comp_plot <- renderPlotly({
+    building_comparison_graph(breakdown_df(), b_df())
+    })
+
   output$fuel_sqft <- renderText({
     if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
       { 

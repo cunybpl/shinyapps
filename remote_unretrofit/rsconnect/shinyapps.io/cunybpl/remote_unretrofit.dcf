@@ -5,6 +5,6 @@ account: cunybpl
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 312065
-bundleId: 1809232
+bundleId: 1843806
 url: https://cunybpl.shinyapps.io/remote_unretrofit/
-when: 1547224338.36034
+when: 1548775516.71966
