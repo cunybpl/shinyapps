@@ -5,6 +5,6 @@ account: cunybpl
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 565828
-bundleId: 1813735
+bundleId: 1864985
 url: https://cunybpl.shinyapps.io/ivt_2/
-when: 1547488547.71601
+when: 1549658925.53248

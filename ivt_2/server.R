@@ -1,5 +1,6 @@
 library(shiny)
 library(plotly)
+library(DT)
 
 server <- function(input, output){
 	inter_org_df <- reactive({
@@ -54,7 +55,7 @@ server <- function(input, output){
   		{
   			return(NULL)
   		}
-  		df = temp_df()[,c('date', input$meter, 'y_m_d', 'year', 'week_number', 'date', 'hour','hour_point','weekday','weekday_flag')]
+  		df = temp_df()[,c('date', input$meter, 'y_m_d', 'year', 'week_number', 'hour','hour_point','weekday','weekday_flag')]
   		colnames(df)[colnames(df) == input$meter] <-  'demand'
   		calc_list = calc_usage_func(df, interval_n())
       df = calc_list$df
@@ -99,6 +100,14 @@ server <- function(input, output){
         return(NULL)
       }
       count_func(inter_df(), interval_n())
+      })
+
+    load_df <- reactive({
+      if(inter_null())
+      {
+        return(NULL)
+      }
+      make_load_df(inter_df())
       })
 
     weekly_plot_list <- reactive({
@@ -184,7 +193,6 @@ server <- function(input, output){
     })
 
   output$na_point_note <- renderText({
-    ''
     if(final_na_point())
     {
       paste(final_na_point(), 'points at the end of data sets are not interpolated.')
@@ -204,5 +212,21 @@ server <- function(input, output){
     }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = NULL)
 
   output$approx_alert <- renderText({cout_df()$approx_msg})
+
+  output$energy_sig_graph <- renderPlotly({
+    plot_energy_sig(inter_df(), oat_df())
+    })
+
+  output$duration_curve <- renderPlotly({
+    main_plot_duration_curve(inter_df())
+    })
+
+  output$base_peak_table <- renderDataTable({
+    load_df()
+    }, rownames = FALSE, width = "auto")
+
+  output$base_peak_stat_table <- renderTable({
+    make_load_stat_table(load_df())
+    }, rownames = TRUE, width = "auto")
 
 }

@@ -1,6 +1,7 @@
 library(shiny)
 library(bplclientR)
 library(plotly)
+library(DT)
 shinyServer(function(input, output, session) {
 #### UI code --------------------------------------------------------------
   output$ui <- renderUI({
@@ -24,8 +25,9 @@ shinyServer(function(input, output, session) {
           column(width = 4,
           sidebarPanel(style = "position:fixed;width:inherit;",width = 4,
             uiOutput('category_wiggy'),
+            uiOutput('fun_wiggy'),
             uiOutput('bdbid_wiggy'),
-            numericInput("fiscal_year", "Fiscal Year: ", 2017, min = 2014, max = 2018),
+            numericInput("fiscal_year", "Fiscal Year: ", 2018, min = 2014, max = 2018),
             fluidRow(
                 column(4, actionButton(inputId = "prevBin", label = "Previous")),
                 column(4, actionButton(inputId = "nextBin", label = "Next"))
@@ -137,7 +139,18 @@ shinyServer(function(input, output, session) {
         ),
         tabPanel('Building Comparison',
           br(),
-          plotlyOutput('b_comp_plot'))
+          plotlyOutput('b_comp_plot'),
+          br(),
+          br(),
+          h4(textOutput('build_count_elec')),
+          br(),
+          dataTableOutput('lean_elec_table'),
+          br(),br(), br(),
+          h4(textOutput('build_count_fuel')),
+          br(),
+          dataTableOutput('lean_fuel_table'),
+          br(), br()
+          )
             )#main tab panel
           )))#main panle
         )
@@ -215,30 +228,78 @@ shinyServer(function(input, output, session) {
     )
     })
 
-
-  binfo_df <- reactive({
-
+  binfo_org_df <- reactive({
     load("building_info.RData", df <- new.env()) 
-    bin_df = df$binfo_df
-    #bin_df = paginator_fetch_request('dcasdb/buildings/', query_params=list(page_size = 1000))$result
+    df$binfo_df
+    })
+
+  primary_fun <- reactive({
 
     fun_flag = lean_category_df()$primary_fun[lean_category_df()$lean_category == input$category]
-    if (fun_flag)
-    {
-      #result_list = paginator_fetch_request('dcasdb/buildings/', query_params=list(epapm_primary_function = input$category))
-      df = subset(bin_df, bin_df$epapm_primary_function == input$category)
+
+    #available primary funtion from portfolio
+    fun_aval = subset(lean_category_df()$lean_category, lean_category_df()$primary_fun == 1)
+
+    if (fun_flag){
+      return(list(fun_vec = NULL, fun_flag = fun_flag))
     }else
     {
-      #result_list = paginator_fetch_request('dcasdb/buildings/', query_params=list(oper_agency_acronym = input$category))
-      df = subset(bin_df, bin_df$oper_agency_acronym == input$category)
+      b_fun_vec = subset(binfo_org_df()$epapm_primary_function, binfo_org_df()$oper_agency_acronym == input$category)
+      fun_vec = fun_aval[fun_aval %in% b_fun_vec]
+      return(list(fun_vec = c(fun_vec, 'None'), fun_flag = fun_flag))
     }
-    df
+    })
+
+  output$fun_wiggy <- renderUI({
+    tagList(
+      selectInput('fun_input', 'Choose Building Function', sort(primary_fun()$fun_vec), selected = NULL, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+    )
+    })
+
+  lean_cat <- reactive({
+    if(input$fun_input != 'None' & primary_fun()$fun_flag == 0){
+      input$fun_input
+    }else
+      input$category
+    })
+
+  #all the buildings from building info, given agency and functions and blah blah
+  binfo_df <- reactive({
+    #bin_df = paginator_fetch_request('dcasdb/buildings/', query_params=list(page_size = 1000))$result
+    if (primary_fun()$fun_flag){ 
+      df = subset(binfo_org_df(), binfo_org_df()$epapm_primary_function == lean_cat())
+    }else{ #input$cat is agency
+      if(input$fun_input != 'None'){
+        df = subset(binfo_org_df(), binfo_org_df()$epapm_primary_function == lean_cat() & binfo_org_df()$oper_agency_acronym == input$category)
+      }else{
+        df = subset(binfo_org_df(), binfo_org_df()$oper_agency_acronym == lean_cat())
+      }
+    }
+    return(df)
   })
 
-  b_df <- reactive({
+  #all the buildings from building info, given agency and functions and blah blah
+  b_df0 <- reactive({
       comb = paste(binfo_df()$bdbid, binfo_df()$building_name, sep = ' - ')
       b_df = data.frame(bdbid = binfo_df()$bdbid, name = comb)
   })
+
+  bdbid_vec <- reactive({paste0(b_df0()$bdbid, collapse = ',')})
+
+  null_drop <- reactive({
+    is.null(b_df()$name)
+    })
+
+  #buildings that satisfy requirements given by agency and functions and make it to breakdown_df
+  b_df <- reactive({
+    if (is.null(breakdown_df()))
+    {
+      return(NULL)
+    }else
+    { 
+      return(subset(b_df0(), b_df0()$bdbid %in% breakdown_df()$bdbid))
+    }
+    })
 
   output$bdbid_wiggy <- renderUI({
     tagList(
@@ -252,7 +313,6 @@ shinyServer(function(input, output, session) {
 
   b_name  <- reactive({get_building_name(binfo_df(), bdbid_n())})
 
-  bdbid_vec <- reactive({paste0(b_df()$bdbid, collapse = ',')})
 
   observeEvent(input$prevBin, {
         current <- which(b_df()$bdbid == bdbid_n())
@@ -280,9 +340,13 @@ shinyServer(function(input, output, session) {
 
   temp_df <- reactive({
     fiscal_n = paste(input$fiscal_year, input$fiscal_year - 1, sep=',')
+    if (null_drop())
+    {
+      return(NULL)
+    }
     df = fetch_request('portfolios/utility/', query_params=list(bdbid = bdbid_n(), fiscal_year = fiscal_n))$result
     if (length(df))
-    {
+    { 
       colnames(df)[colnames(df) == 'oat' | colnames(df) == 'OAT'] = 'OAT'
       util_cols = c("using_sqft", "using_fuel_oil")
       df = missing_cols_handler(util_cols, df)
@@ -303,14 +367,14 @@ shinyServer(function(input, output, session) {
       df = missing_cols_handler(best_cols, df)
       return(df)
     }else
-    {
+    { 
       return(NULL)
     }
   })
 
   binfo_output_list <- reactive({
-    if (is.null(binfo_df()))
-    {
+    if (is.null(binfo_df()) | null_drop())
+    { 
       list(binfo_df1 = data.frame(), binfo_df1 = data.frame())
     }else
     { 
@@ -320,7 +384,7 @@ shinyServer(function(input, output, session) {
 
   post_df <- reactive({
     if(is.null(best_model()))
-    {
+    { 
       return(NULL)
     }
     df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
@@ -330,16 +394,16 @@ shinyServer(function(input, output, session) {
     })
 
   lean_df <- reactive({
-    df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = input$category, page_size = 1000))$result
-    if(length(df) == 0)
-    {
+    df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
+    if(length(df) == 0 | null_drop())
+    { print('lean')
       return(NULL)
     }
     return(df)
     })
 
   co2eui_df <- reactive({
-    df = paginator_fetch_request('portfolios/co2eui-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = input$category, page_size = 1000))$result
+    df = paginator_fetch_request('portfolios/co2eui-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
     if(length(df) == 0)
     {
       return(NULL)
@@ -348,6 +412,7 @@ shinyServer(function(input, output, session) {
   })
 
   breakdown_df <- reactive({
+    print(bdbid_vec())
     df = paginator_fetch_request('portfolios/co2eui-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     if(length(df) == 0)
     {
@@ -359,7 +424,7 @@ shinyServer(function(input, output, session) {
   energy_df <- reactive({
     df = paginator_fetch_request('portfolios/energy-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     if(length(df) == 0)
-    {
+    { 
       return(NULL)
     }
     return(df)
@@ -378,9 +443,42 @@ shinyServer(function(input, output, session) {
     per_num_func(lean_df(), bdbid_n(), 'Fuel')
     })
 
+
+  ########## Building comparison, lean ##############
+
+  lean_df_fuel <- reactive({
+    lean_table_handler(lean_df(), 'Fuel', b_df())
+    })
+
+  lean_df_elec <- reactive({
+    lean_table_handler(lean_df(), 'Elec', b_df())
+    })
+
+  num_lean_fuel <- reactive({
+    if(is.null(lean_df_fuel()))
+    {
+      return(0)
+    }
+    nrow(lean_df_fuel())
+    })
+  
+  num_lean_elec <- reactive({
+    if(is.null(lean_df_elec()))
+    {
+      return(0)
+    }
+    nrow(lean_df_elec())
+    })
+
   ################# Energy Independent ###############
 
   energy_break_plot <- reactive({
+    if(null_drop())
+    {
+      p = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No usage points')
+      return(list(site_p = p, source_p = p, break_table = data.frame()))
+    }
+
     if (bdbid_n() %in% unique(energy_df()$bdbid))
     {
       df = subset(energy_df(), energy_df()$bdbid == bdbid_n())
@@ -408,6 +506,10 @@ shinyServer(function(input, output, session) {
   b_name  <- reactive({get_building_name(binfo_df(), bdbid_n())})
 
   co2_lean_plot <- reactive({
+    if(null_drop())
+    {
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points'))
+    }
     if(bdbid_n() %in% unique(co2eui_df()$bdbid))
     { 
       co2_rank = co2_rank_get(co2eui_df(), bdbid_n())
@@ -609,9 +711,27 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  ############### Buildings ################
+
+  output$build_count_elec <- renderText({
+    paste('Elec:',num_lean_elec(), 'buildings from lean category', lean_cat())
+    })
+
+
+  output$build_count_fuel <- renderText({
+    paste('Fuel:',num_lean_fuel(), 'buildings from lean category', lean_cat())
+    })
+
   output$b_comp_plot <- renderPlotly({
     building_comparison_graph(breakdown_df(), b_df())
     })
 
+  output$lean_elec_table <- renderDataTable({
+    lean_df_elec()
+    }, rownames = FALSE)
+
+  output$lean_fuel_table <- renderDataTable({
+    lean_df_fuel()
+    }, rownames = FALSE)
 
 })

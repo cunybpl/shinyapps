@@ -1,5 +1,6 @@
 library(shiny)
 library(plotly)
+library(DT)
 
 ui <- fluidPage(
   headerPanel('Shiny Interval Data Tool'),
@@ -38,7 +39,16 @@ ui <- fluidPage(
           tableOutput('approx_count_df'),
           h5('Note: Missing points in data sets are interpolated (approximated) by linear interpolation.'),
           span(textOutput('na_point_note'), size = '24pt'),
-          tableOutput('data_count_df')
+          tableOutput('data_count_df'),
+          br(),
+          h3('Daily Peak and Baseload metric table'),
+          h4('Stats'),
+          tableOutput('base_peak_stat_table'),
+          br(),
+          h4('Daily Data'),
+          dataTableOutput('base_peak_table'),
+          br(),
+          br()
           ),
         tabPanel("Daily Usage Graphs",
             h3("Daily Usage Per Week", align = "center"),
@@ -63,6 +73,13 @@ ui <- fluidPage(
           plotlyOutput('all_weekload_plot_3d'),
           br(),
           plotlyOutput('color_heat_plot2', height = '100px', width = '500px'),
+          br()
+          ),
+        tabPanel('Graphs',
+          br(),
+          plotlyOutput('energy_sig_graph'),
+          br(),
+          plotlyOutput('duration_curve'),
           br()
           )
     )

@@ -3,6 +3,7 @@ library(zoo)
 library(plotly)
 library(chron)
 library(plyr)
+library(reshape2)
 
 prepare_data_func <- function(df)
 {
@@ -19,6 +20,10 @@ prepare_data_func <- function(df)
 	df$weekday = wday(df$date, label = TRUE, abbr = TRUE)
 	df$weekday_flag = 1
 	df$weekday_flag[is.holiday(df$date) | is.weekend(df$date)] = 0
+  df$weekday_num = as.numeric(df$weekday)
+  #df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
+  #df$week_start = as.Date(paste(df$year, df$week_number, df$weekday_num, sep="-"), "%Y-%U-%u")
+  #df$weekrange = paste(df$week_start, '', '-', '', df$week_start + 6)
 	return(df)
 }
 
@@ -66,7 +71,7 @@ plot_weekly <- function(year_df, week_i, interval = NULL)
 	  graph_title = paste(temp_week_df$y_m_d[1], '-', temp_week_df$y_m_d[nrow(temp_week_df)], week_name)
 	  p1 = add_trace(p = plot_ly(), x = ~temp_week_df$hour_point, y = ~temp_week_df$usage, type ='scatter', mode = 'lines', color = ~temp_week_df$weekday) %>%
 	        layout(title = graph_title, xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Usage (kWh)', zeroline = FALSE, showline = FALSE))
-	  p1 = add_trace( p = p1, x = ~approx_week_df$hour_point, y = ~approx_week_df$usage, type ='scatter', mode = 'lines', line = list(dash = 'dash'), color = ~approx_week_df$weekday)
+	  p1 = add_trace(p = p1, x = ~approx_week_df$hour_point, y = ~approx_week_df$usage, type ='scatter', mode = 'lines', line = list(dash = 'dash'), color = ~approx_week_df$weekday)
 }
 
 week_match_func <- function(df, type_flag = 'approx')
@@ -118,6 +123,7 @@ calc_mean_sd_func <- function(df)
   temp$error = qt(0.975, df=temp$length-1)*temp$stat_dev/sqrt(temp$length)
   temp$upper_lim = temp$avg + temp$error
   temp$lower_lim = temp$avg - temp$error
+  #thanks to the past me for figuring this shit out.
   temp$weekday_num = as.numeric(temp$weekday)
   temp$index_hour = temp$hour + (temp$weekday_num - 1)*24
   #temp$index_hour = paste(temp$weekday, temp$hour)
@@ -293,3 +299,85 @@ main_dup <- function(df){
   }
   return(df)
 }
+
+#use inter_df, oat_df
+plot_energy_sig <- function(df, oat_df){
+  oat_day = aggregate(oat_df[,'OAT'], list(oat_df$y_m_d), mean)
+  colnames(oat_day) = c('date', 'OAT')
+  df_day = aggregate(df[,'approx'], list(df$y_m_d), mean)
+  colnames(df_day) = c('date', 'approx')
+  df_merge = merge(df_day, oat_day, by = 'date', all.x = TRUE)
+
+  df_merge$weekday_flag = 1
+  df_merge$weekday_flag[is.holiday(df_merge$date) | is.weekend(df_merge$date)] = 0
+
+  p1 = plot_ly() %>% add_trace(data = subset(df_merge, df_merge$weekday_flag == 1), x = ~OAT, y = ~approx, type = "scatter", mode = "markers", 
+      marker = list(symbol = "circle", size = 9), inherit = FALSE, name = 'Weekday') %>%
+      add_trace(data = subset(df_merge, df_merge$weekday_flag == 0), x = ~OAT, y = ~approx, type = "scatter", mode = "markers", 
+      marker = list(symbol = "o", size = 9), inherit = FALSE, name = 'Weekend') %>% layout(title = "Energy Signature", 
+        yaxis = list(title = "Daily Avg Demand (kW)"), 
+        xaxis = list(title = "Daily Avg OAT (F)"))
+
+  return(p1)
+}
+
+#use inter_df
+main_plot_duration_curve <- function(df){
+  p1 = plot_duration_curve(df, 1)
+  return(plot_duration_curve(df, 0, p1))
+}
+
+plot_duration_curve <- function(df, weekday_flag_n, p1 = plot_ly()){
+  df = subset(df, df$weekday_flag == weekday_flag_n)
+
+  demand_vec = sort(df$approx, decreasing = TRUE)
+    step = 100/length(demand_vec)
+    x_vec = seq(1,100, along.with = demand_vec)
+
+    if(weekday_flag_n){
+      name_n = 'Weekday'
+    }else{
+      name_n = 'Weekend'
+    }
+
+    p1 = add_trace(p = p1, x = ~x_vec, y = ~demand_vec, type = "scatter", mode = "lines", inherit = FALSE, name = name_n) %>%
+    layout(title = "Demand Duration Curve", 
+        yaxis = list(title = "Demand (kW)"), 
+        xaxis = list(title = "Percentage of Time"))
+
+    return(p1)
+}
+
+#use inter_df
+make_load_df <- function(df){
+  df_load = data.frame(date = unique(df$y_m_d))
+  df_load$base_load = aggregate(df[,'approx'], list(df$y_m_d), quantile, probs = c(.025))$x
+  df_load$peak_load = aggregate(df[,'approx'], list(df$y_m_d), quantile, probs = c(.975))$x
+  df_load$peak_ratio = df_load$base_load/df_load$peak_load
+  colnames(df_load) = c('Date', 'Baseload', 'Peak', 'Base to Peak ratio')
+  return(df_load)
+}
+
+#use output from make_load_df
+calc_load_stat_func <- function(x, load_type){
+  x_mean = mean(x)
+  x_median = median(x)
+  x_sd = sd(x)
+  df = data.frame(stat = c(x_mean,x_median, x_sd), row.names = c('Mean', 'Median', 'Standard Deviation'))
+  colnames(df) = load_type
+  return(df)
+}
+
+
+make_load_stat_table <- function(df){
+  stat_df = calc_load_stat_func(df[,'Baseload'], 'Baseload')
+  for (i in c('Peak', 'Base to Peak ratio')){
+    temp = calc_load_stat_func(df[,i], i)
+    stat_df = cbind(stat_df, temp)
+  }
+  return(stat_df)
+}
+
+
+
+

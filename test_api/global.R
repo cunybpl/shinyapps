@@ -69,7 +69,12 @@ plot_model <- function(x, model, B, cp1, cp2, energy, unit, p1 = plot_ly())
 }
 
 flag_func <- function(df, bdbid_n, energy)
-{
+{ 
+  if(is.null(df))
+  {
+    return(FALSE)
+  }
+
   if (bdbid_n %in% unique(df$bdbid) & energy %in% df$energy_type[df$bdbid == bdbid_n])
   {
     flag = TRUE
@@ -300,8 +305,14 @@ co2_breakdown <- function(breakdown_df, bdbid_n)
 }
 
 co2_value_get <- function(breakdown_df, bdbid_n)
-{
-  if (!is.null(co2_breakdown) & bdbid_n %in% breakdown_df$bdbid)
+{ 
+
+  if(is.null(breakdown_df))
+  {
+    return(data.frame())
+  }
+
+  if (bdbid_n %in% breakdown_df$bdbid)
   {
      site_eui = round(subset(breakdown_df$site_eui, breakdown_df$bdbid == bdbid_n),2)
      source_eui = round(subset(breakdown_df$source_eui, breakdown_df$bdbid == bdbid_n),2)
@@ -852,9 +863,12 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
 
 building_comparison_graph <- function(df, binfo)
 { 
+  if (is.null(df)){
+    return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data')))
+  }
   b_name = subset(binfo$name, binfo$bdbid %in% df$bdbid)
   p_init = plot_ly()
-  p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$total_site_energy_kbtu, type ='scatter', mode ='markers', text = b_name, hoverinfo = 'x+y+text',
+  p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$site_eui, type ='scatter', mode ='markers', text = b_name, hoverinfo = 'x+y+text',
     marker = list(symbol = 'circle', color = 'rgba(176,220,175,1)', size = 9, line = list(color = 'rgba(164,165,164,1)', width = 1)), name = 'blah', inherit = FALSE) %>%
   layout(title = 'Buliding Comparison',
     xaxis = list(title = "Property Size (sqft)",
@@ -864,4 +878,18 @@ building_comparison_graph <- function(df, binfo)
                       showticklabels = TRUE,
                       zeroline = TRUE))
   return(p)
+}
+
+
+lean_table_handler <- function(lean_df, energy, b_df){
+  if(is.null(b_df$bdbid) | is.null(lean_df))
+  {
+    return(NULL)
+  }
+
+  df = subset(lean_df, lean_df$energy_type == energy & lean_df$bdbid %in% b_df$bdbid)
+  df = df[,c('bdbid', "cooling_change_point_numeric_rank", "cooling_sensitivity_numeric_rank", "heating_change_point_numeric_rank", "heating_sensitivity_numeric_rank", "baseload_numeric_rank")]
+  colnames(df) = c('bdbid', 'Cooling Change Point Numeric Rank', 'Cooling Sens Numeric Rank', 'Heating Change Point Numeric Rank', 'Heating Sens Numeric Rank', 'Baseload Numeric Rank')
+  df$bdbid = subset(b_df$name, b_df$bdbid %in% df$bdbid)
+  return(df)
 }
