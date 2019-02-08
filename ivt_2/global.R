@@ -62,6 +62,7 @@ calc_usage_func <- function(df, interval)
 	return(list(df = df, final_na_point = final_na_point))
 }
 
+#mod
 plot_weekly <- function(year_df, week_i, interval = NULL)
 {
 	  temp_week_df = subset(year_df, year_df$week_number == week_i)
@@ -70,7 +71,7 @@ plot_weekly <- function(year_df, week_i, interval = NULL)
 	  week_name = paste('(Week ', week_i, ')', sep ='')
 	  graph_title = paste(temp_week_df$y_m_d[1], '-', temp_week_df$y_m_d[nrow(temp_week_df)], week_name)
 	  p1 = add_trace(p = plot_ly(), x = ~temp_week_df$hour_point, y = ~temp_week_df$usage, type ='scatter', mode = 'lines', color = ~temp_week_df$weekday) %>%
-	        layout(title = graph_title, xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Usage (kWh)', zeroline = FALSE, showline = FALSE))
+	        layout(title = graph_title, xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Usage (kWh)', zeroline = FALSE, showline = FALSE, rangemode = 'tozero'))
 	  p1 = add_trace(p = p1, x = ~approx_week_df$hour_point, y = ~approx_week_df$usage, type ='scatter', mode = 'lines', line = list(dash = 'dash'), color = ~approx_week_df$weekday)
 }
 
@@ -178,6 +179,7 @@ main_plot_ci <- function(mean_df)
   return(p1)
 }
 
+#mod1,2
 plot_timeseries_agg_func <- function(oat_df, df, agg_oat, agg_df){
   ay <- list(tickfont = list(color = "red"), overlaying = "y", side = "right", title = "OAT")
 
@@ -189,8 +191,8 @@ plot_timeseries_agg_func <- function(oat_df, df, agg_oat, agg_df){
       y = ~df$approx, type = "scatter", mode = "lines", line = list(color = "rgba(51, 113, 213, 0.9)", width = 0.7), 
       name = "Demand") %>% add_trace(x = ~agg_df$date, y = ~agg_df$approx, type = 'scatter', mode = 'lines', line = list(width = 5, color = 'rgba(51, 113, 213, 1)'), name = 'Weekly Average') %>%
       layout(title = "Time Series", 
-      yaxis2 = ay, yaxis = list(title = "Demand (kW)"), margin = list(b = 100), 
-      xaxis = list(type = "date", title = "Date"))
+      yaxis2 = ay, yaxis = list(title = "Demand (kW)", rangemode = 'tozero', zeroline = FALSE, showline = FALSE), margin = list(b = 100), 
+      xaxis = list(type = "date", title = "Date", zeroline = FALSE, showline = FALSE))
 }
 
 color_palette_creator <- function(agg_oat)
@@ -300,6 +302,7 @@ main_dup <- function(df){
   return(df)
 }
 
+#mod1,2
 #use inter_df, oat_df
 plot_energy_sig <- function(df, oat_df){
   oat_day = aggregate(oat_df[,'OAT'], list(oat_df$y_m_d), mean)
@@ -315,8 +318,8 @@ plot_energy_sig <- function(df, oat_df){
       marker = list(symbol = "circle", size = 9), inherit = FALSE, name = 'Weekday') %>%
       add_trace(data = subset(df_merge, df_merge$weekday_flag == 0), x = ~OAT, y = ~approx, type = "scatter", mode = "markers", 
       marker = list(symbol = "o", size = 9), inherit = FALSE, name = 'Weekend') %>% layout(title = "Energy Signature", 
-        yaxis = list(title = "Daily Avg Demand (kW)"), 
-        xaxis = list(title = "Daily Avg OAT (F)"))
+        yaxis = list(title = "Daily Avg Demand (kW)", rangemode = 'tozero', zeroline = FALSE, showline = FALSE), 
+        xaxis = list(title = "Daily Avg OAT (F)", zeroline = FALSE, showline = FALSE))
 
   return(p1)
 }
@@ -327,6 +330,7 @@ main_plot_duration_curve <- function(df){
   return(plot_duration_curve(df, 0, p1))
 }
 
+#mod1,2
 plot_duration_curve <- function(df, weekday_flag_n, p1 = plot_ly()){
   df = subset(df, df$weekday_flag == weekday_flag_n)
 
@@ -342,8 +346,8 @@ plot_duration_curve <- function(df, weekday_flag_n, p1 = plot_ly()){
 
     p1 = add_trace(p = p1, x = ~x_vec, y = ~demand_vec, type = "scatter", mode = "lines", inherit = FALSE, name = name_n) %>%
     layout(title = "Demand Duration Curve", 
-        yaxis = list(title = "Demand (kW)"), 
-        xaxis = list(title = "Percentage of Time"))
+        yaxis = list(title = "Demand (kW)", rangemode = 'tozero', zeroline = FALSE, showline = FALSE), 
+        xaxis = list(title = "Percentage of Time", zeroline = FALSE, showline = FALSE))
 
     return(p1)
 }
