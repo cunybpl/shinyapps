@@ -92,6 +92,10 @@ server <- function(input, output){
   		subset(inter_df(), inter_df()$year == input$year)
   		})
 
+    heatmap_mat <- reactive({
+      make_heatmap_matrix(temp_df())
+      })
+
   	agg_df <- reactive({week_match_func(inter_df())})
 
     cout_df <- reactive({
@@ -228,5 +232,9 @@ server <- function(input, output){
   output$base_peak_stat_table <- renderTable({
     make_load_stat_table(load_df())
     }, rownames = TRUE, width = "auto")
+
+  output$heatmap_plot <- renderPlotly({
+    plot_weekly_heatmap(heatmap_mat())
+    })
 
 }

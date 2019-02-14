@@ -80,6 +80,8 @@ ui <- fluidPage(
           plotlyOutput('energy_sig_graph'),
           br(),
           plotlyOutput('duration_curve'),
+          br(),
+          plotlyOutput('heatmap_plot'),
           br()
           )
     )

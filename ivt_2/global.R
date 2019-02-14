@@ -24,6 +24,7 @@ prepare_data_func <- function(df)
   #df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
   #df$week_start = as.Date(paste(df$year, df$week_number, df$weekday_num, sep="-"), "%Y-%U-%u")
   #df$weekrange = paste(df$week_start, '', '-', '', df$week_start + 6)
+  df$week_name = paste('Week', df$weekday_num, ', ', df$year, sep = '')
 	return(df)
 }
 
@@ -372,7 +373,6 @@ calc_load_stat_func <- function(x, load_type){
   return(df)
 }
 
-
 make_load_stat_table <- function(df){
   stat_df = calc_load_stat_func(df[,'Baseload'], 'Baseload')
   for (i in c('Peak', 'Base to Peak ratio')){
@@ -382,6 +382,28 @@ make_load_stat_table <- function(df){
   return(stat_df)
 }
 
+#use temp_df, output from prepare_data_func
+make_heatmap_matrix <- function(df){
+  df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
+  df$week_name = paste(df$year, df$week_number, sep = '-')
+  df_mat = dcast(df, week_name ~ index_hour_point, fill = 0, value.var = 'demand')
+  return(df_mat)
+}
 
+#use output from make_heatmap_matrix
+plot_weekly_heatmap <- function(df){
+  x = colnames(df)[2:ncol(df)]
+  y_split = strsplit(df$week_name, split='-')
+  m = as.matrix(df[,c(2:ncol(df))])
 
+  week_vec = sapply(y_split, function(x) paste('Week ', x[2], ', ', x[1], sep = ''))
+
+  text_x = c('Sun-Midnight', 'Sun-Noon', 'Mon-Midnight', 'Mon-Noon', 'Tue-Midnight', 'Tue-Noon', 'Wed-Midnight', 'Wed-Noon', 'Thu-Midnight', 'Thu-Noon', 'Fri-Midnight', 'Fri-Noon', 'Sat-Midnight', 'Sat-Noon')
+  p = add_trace(p = plot_ly(), x = x, y= week_vec, z = m,
+    type = "heatmap", showscale = TRUE) %>% layout(title = 'Heatmap', margin = list(l = 100,b = 100), yaxis = list(tickcolor = 'white', type = 'category',
+        showline = FALSE, zeroline = FALSE, showgrid = FALSE),
+        xaxis = list(title = 'Time of Day', zeroline = FALSE, showline = FALSE,
+          tickmode = 'array', tickvals = c(0:13)*12, ticktext = text_x, tickangle = -45))
+  return(p)
+}
 

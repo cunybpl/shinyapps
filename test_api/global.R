@@ -861,25 +861,35 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
     return(post_output_df)
 }
 
-building_comparison_graph <- function(df, binfo)
+
+building_comparison_graph <- function(df, binfo, primary_fun)
 { 
   if (is.null(df)){
     return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data')))
   }
-  b_name = subset(binfo$name, binfo$bdbid %in% df$bdbid)
-  p_init = plot_ly()
-  p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$site_eui, type ='scatter', mode ='markers', text = b_name, hoverinfo = 'x+y+text',
-    marker = list(symbol = 'circle', color = 'rgba(176,220,175,1)', size = 9, line = list(color = 'rgba(164,165,164,1)', width = 1)), name = 'blah', inherit = FALSE) %>%
-  layout(title = 'Buliding Comparison',
-    xaxis = list(title = "Property Size (sqft)",
-                      showticklabels = TRUE,
-                      zeroline = TRUE),
-         yaxis = list(title = "EUI (kBTU/sqft)",
-                      showticklabels = TRUE,
-                      zeroline = TRUE))
+  aes_df = subset(binfo, binfo$bdbid %in% df$bdbid)
+  aes_df = aes_df[order(aes_df$bdbid),]
+  df = df[order(df$bdbid),]
+  p_init = plot_ly(source = 'B')
+
+  if(primary_fun == 'None'){
+    pal = colorRamps::matlab.like(length(unique(aes_df$primary_fun)))
+    pal = setNames(pal, unique(aes_df$primary_fun))
+    p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$site_eui, type ='scatter',
+              mode ='markers', text = aes_df$name, hoverinfo = 'x+y+text', color = aes_df$primary_fun, colors = pal,
+              marker = list(symbol = 'circle', size = 9, opacity = 0.6,
+                        line = list(color = 'rgba(164,165,164,1)', width = 1)), inherit = FALSE)
+  }else
+  {
+    p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$site_eui, type ='scatter', mode ='markers', text = aes_df$name, hoverinfo = 'x+y+text',
+    marker = list(symbol = 'circle', color = 'rgba(176,220,175,1)', size = 9, line = list(color = 'rgba(164,165,164,1)', width = 1)), name = 'blah', inherit = FALSE)
+  }
+  p = p %>% layout(title = 'Buliding Comparison', xaxis = list(title = "Property Size (sqft)",
+                      showticklabels = TRUE, zeroline = FALSE, showline = FALSE),
+                  yaxis = list(title = "EUI (kBTU/sqft)", showticklabels = TRUE, showline = FALSE,
+                      zeroline = FALSE))
   return(p)
 }
-
 
 lean_table_handler <- function(lean_df, energy, b_df){
   if(is.null(b_df$bdbid) | is.null(lean_df))
@@ -887,9 +897,19 @@ lean_table_handler <- function(lean_df, energy, b_df){
     return(NULL)
   }
 
-  df = subset(lean_df, lean_df$energy_type == energy & lean_df$bdbid %in% b_df$bdbid)
+  #df = subset(lean_df, lean_df$energy_type == energy & lean_df$bdbid %in% b_df$bdbid)
+  df = subset(lean_df, lean_df$energy_type == energy)
+  total_num = nrow(df)
+  df = subset(df, df$bdbid %in% b_df$bdbid)
   df = df[,c('bdbid', "cooling_change_point_numeric_rank", "cooling_sensitivity_numeric_rank", "heating_change_point_numeric_rank", "heating_sensitivity_numeric_rank", "baseload_numeric_rank")]
   colnames(df) = c('bdbid', 'Cooling Change Point Numeric Rank', 'Cooling Sens Numeric Rank', 'Heating Change Point Numeric Rank', 'Heating Sens Numeric Rank', 'Baseload Numeric Rank')
   df$bdbid = subset(b_df$name, b_df$bdbid %in% df$bdbid)
-  return(df)
+  return(list(df = df, total_num = total_num))
 }
+
+point_lookup <- function(breakdown_df, x){
+  bdbid = subset(breakdown_df$bdbid, breakdown_df$total_bldg_gross_sq_ft == x)
+  return(bdbid)
+}
+
+

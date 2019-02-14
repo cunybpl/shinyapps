@@ -39,6 +39,20 @@ shinyServer(function(input, output, session) {
               tabPanel("App Info",
                 h5('To get started, Utility CSV must be uploaded.')
               ),
+              tabPanel('Building Portfolio',
+                br(),
+                plotlyOutput('b_comp_plot'),
+                br(),
+                br(),
+                h4(textOutput('build_count_elec')),
+                br(),
+                dataTableOutput('lean_elec_table'),
+                br(),br(), br(),
+                h4(textOutput('build_count_fuel')),
+                br(),
+                dataTableOutput('lean_fuel_table'),
+                br(), br()
+                ),
               tabPanel("Graphs & Tables for Elec",
             h3("Building Information"),
             br(),
@@ -136,21 +150,7 @@ shinyServer(function(input, output, session) {
             hr(),
             h3("Elec Vs. Fuel", align = "center"),
             plotlyOutput('elec_fuel_plot')
-        ),
-        tabPanel('Building Comparison',
-          br(),
-          plotlyOutput('b_comp_plot'),
-          br(),
-          br(),
-          h4(textOutput('build_count_elec')),
-          br(),
-          dataTableOutput('lean_elec_table'),
-          br(),br(), br(),
-          h4(textOutput('build_count_fuel')),
-          br(),
-          dataTableOutput('lean_fuel_table'),
-          br(), br()
-          )
+        )
             )#main tab panel
           )))#main panle
         )
@@ -219,6 +219,7 @@ shinyServer(function(input, output, session) {
     df$char_n = nchar(trimws(df$lean_category))
     df$primary_fun = 1
     df$primary_fun[df$char_n <= 5] = 0
+    df$primary_fun[df$lean_category == 'Zoo'] = 1
     df
     })
 
@@ -280,8 +281,8 @@ shinyServer(function(input, output, session) {
 
   #all the buildings from building info, given agency and functions and blah blah
   b_df0 <- reactive({
-      comb = paste(binfo_df()$bdbid, binfo_df()$building_name, sep = ' - ')
-      b_df = data.frame(bdbid = binfo_df()$bdbid, name = comb)
+      comb = paste(binfo_df()$bdbid, binfo_df()$building_name, sep = ' - ') #look this shit is happy
+      b_df = data.frame(bdbid = binfo_df()$bdbid, name = comb, primary_fun = binfo_df()$epapm_primary_function, oper_agency = binfo_df()$oper_agency_acronym)
   })
 
   bdbid_vec <- reactive({paste0(b_df0()$bdbid, collapse = ',')})
@@ -306,6 +307,7 @@ shinyServer(function(input, output, session) {
       selectInput('bdbid', 'Choose Facillity', b_df()$name, selected = NULL, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
     )
     })
+
 
   bdbid_n <- reactive({
     b_df()$bdbid[b_df()$name == input$bdbid]
@@ -396,7 +398,7 @@ shinyServer(function(input, output, session) {
   lean_df <- reactive({
     df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
     if(length(df) == 0 | null_drop())
-    { print('lean')
+    {
       return(NULL)
     }
     return(df)
@@ -412,7 +414,6 @@ shinyServer(function(input, output, session) {
   })
 
   breakdown_df <- reactive({
-    print(bdbid_vec())
     df = paginator_fetch_request('portfolios/co2eui-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     if(length(df) == 0)
     {
@@ -454,20 +455,24 @@ shinyServer(function(input, output, session) {
     lean_table_handler(lean_df(), 'Elec', b_df())
     })
 
+  total_lean_elec <- reactive({
+
+    })
+
   num_lean_fuel <- reactive({
-    if(is.null(lean_df_fuel()))
+    if(is.null(lean_df_fuel()$df))
     {
       return(0)
     }
-    nrow(lean_df_fuel())
+    nrow(lean_df_fuel()$df)
     })
   
   num_lean_elec <- reactive({
-    if(is.null(lean_df_elec()))
+    if(is.null(lean_df_elec()$df))
     {
       return(0)
     }
-    nrow(lean_df_elec())
+    nrow(lean_df_elec()$df)
     })
 
   ################# Energy Independent ###############
@@ -711,27 +716,28 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  ##########################################
   ############### Buildings ################
+  ##########################################
 
   output$build_count_elec <- renderText({
-    paste('Elec:',num_lean_elec(), 'buildings from lean category', lean_cat())
+    paste('Elec:',num_lean_elec(), 'out of', lean_df_elec()$total_num, 'buildings from lean category', lean_cat())
     })
 
-
   output$build_count_fuel <- renderText({
-    paste('Fuel:',num_lean_fuel(), 'buildings from lean category', lean_cat())
+    paste('Fuel:',num_lean_fuel(), 'out of', lean_df_fuel()$total_num, 'buildings from lean category', lean_cat())
     })
 
   output$b_comp_plot <- renderPlotly({
-    building_comparison_graph(breakdown_df(), b_df())
+    building_comparison_graph(breakdown_df(), b_df(), input$fun_input)
     })
 
   output$lean_elec_table <- renderDataTable({
-    lean_df_elec()
+    lean_df_elec()$df
     }, rownames = FALSE)
 
   output$lean_fuel_table <- renderDataTable({
-    lean_df_fuel()
+    lean_df_fuel()$df
     }, rownames = FALSE)
 
 })
