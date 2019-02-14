@@ -234,7 +234,7 @@ server <- function(input, output){
     }, rownames = TRUE, width = "auto")
 
   output$heatmap_plot <- renderPlotly({
-    plot_weekly_heatmap(heatmap_mat())
+    plot_weekly_heatmap(heatmap_mat(), temp_df())
     })
 
 }

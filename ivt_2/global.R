@@ -391,19 +391,33 @@ make_heatmap_matrix <- function(df){
 }
 
 #use output from make_heatmap_matrix
-plot_weekly_heatmap <- function(df){
+plot_weekly_heatmap <- function(df, temp_df){
   x = colnames(df)[2:ncol(df)]
-  y_split = strsplit(df$week_name, split='-')
+  week_vec = make_week_vec(temp_df)
   m = as.matrix(df[,c(2:ncol(df))])
-
-  week_vec = sapply(y_split, function(x) paste('Week ', x[2], ', ', x[1], sep = ''))
 
   text_x = c('Sun-Midnight', 'Sun-Noon', 'Mon-Midnight', 'Mon-Noon', 'Tue-Midnight', 'Tue-Noon', 'Wed-Midnight', 'Wed-Noon', 'Thu-Midnight', 'Thu-Noon', 'Fri-Midnight', 'Fri-Noon', 'Sat-Midnight', 'Sat-Noon')
   p = add_trace(p = plot_ly(), x = x, y= week_vec, z = m,
-    type = "heatmap", showscale = TRUE) %>% layout(title = 'Heatmap', margin = list(l = 100,b = 100), yaxis = list(tickcolor = 'white', type = 'category',
+    type = "heatmap", showscale = TRUE) %>% layout(title = 'Heatmap', margin = list(l = 165,b = 100), yaxis = list(tickcolor = 'white', type = 'category',
         showline = FALSE, zeroline = FALSE, showgrid = FALSE),
         xaxis = list(title = 'Time of Day', zeroline = FALSE, showline = FALSE,
           tickmode = 'array', tickvals = c(0:13)*12, ticktext = text_x, tickangle = -45))
   return(p)
+}
+
+make_week_vec <- function(df){
+  final_vec = c()
+  for (year_i in unique(df$year)){
+    year_df = subset(df, df$year == year_i)
+    temp_vec = c()
+    result_vec = sapply(1:length(unique(year_df$week_number)), function(i){
+      week_i = unique(year_df$week_number)[i]
+      temp_week_df = subset(year_df, year_df$week_number == week_i)
+      week_name = paste(temp_week_df$y_m_d[1], '-', temp_week_df$y_m_d[nrow(temp_week_df)])
+      temp_vec = c(temp_vec, week_name)
+      })
+    final_vec = c(final_vec, result_vec)
+  }
+  return(final_vec)
 }
 
