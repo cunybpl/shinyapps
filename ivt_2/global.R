@@ -386,7 +386,7 @@ make_load_stat_table <- function(df){
 make_heatmap_matrix <- function(df){
   df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
   df$week_name = paste(df$year, df$week_number, sep = '-')
-  df_mat = dcast(df, week_name ~ index_hour_point, fill = 0, value.var = 'demand')
+  df_mat = dcast(df, week_name ~ index_hour_point, fill = NA, value.var = 'demand')
   return(df_mat)
 }
 
@@ -397,12 +397,12 @@ plot_weekly_heatmap <- function(df, temp_df){
   m = as.matrix(df[,c(2:ncol(df))])
 
   text_x = c('Sun-Midnight', 'Sun-Noon', 'Mon-Midnight', 'Mon-Noon', 'Tue-Midnight', 'Tue-Noon', 'Wed-Midnight', 'Wed-Noon', 'Thu-Midnight', 'Thu-Noon', 'Fri-Midnight', 'Fri-Noon', 'Sat-Midnight', 'Sat-Noon')
-  p = add_trace(p = plot_ly(), x = x, y= week_vec, z = m,
+  p = add_trace(p = plot_ly(), x = x, y= week_vec, z = m, hoverinfo = "x+y+z", colors = grDevices::colorRamp(c('#29CD3F','yellow','#F73434')),
     type = "heatmap", showscale = TRUE) %>% layout(title = 'Heatmap', margin = list(l = 165,b = 100), yaxis = list(tickcolor = 'white', type = 'category',
         showline = FALSE, zeroline = FALSE, showgrid = FALSE),
-        xaxis = list(title = 'Time of Day', zeroline = FALSE, showline = FALSE,
+        xaxis = list(title = 'Time of Day', zeroline = FALSE, showline = FALSE, showgrid = FALSE,
           tickmode = 'array', tickvals = c(0:13)*12, ticktext = text_x, tickangle = -45))
-  return(p)
+  return(make_segment_line(week_vec, p))
 }
 
 make_week_vec <- function(df){
@@ -420,4 +420,12 @@ make_week_vec <- function(df){
   }
   return(final_vec)
 }
+
+make_segment_line <- function(week_vec, p = plot_ly()){
+  x = c(1:13)*12
+  for (i in x){
+    p = add_trace(p = p, x = rep(i, length(week_vec)), y = week_vec, type = 'scatter', mode = "lines", line = list(dash = 'dash', color = 'red'), hoverinfo = 'none', showlegend =FALSE)
+  }
+  return(p)
+} 
 
