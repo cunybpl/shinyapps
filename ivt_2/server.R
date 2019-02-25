@@ -10,8 +10,7 @@ server <- function(input, output){
 	      return(NULL)
 
 	    df = read.csv(inFile$datapath)
-	    colnames(df)[colnames(df) == 'Interval End'] <-  'date'
-	    df
+	    initial_prep_data_func(df)
   	})
 
   inter_null <- reactive({is.null(inter_org_df())})
@@ -93,7 +92,7 @@ server <- function(input, output){
   		})
 
     heatmap_mat <- reactive({
-      make_heatmap_matrix(temp_df())
+      make_heatmap_matrix(temp_df(), input$meter)
       })
 
   	agg_df <- reactive({week_match_func(inter_df())})

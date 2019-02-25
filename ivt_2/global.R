@@ -53,9 +53,14 @@ count_func <- function(df, interval)
   return(list(approx_df = approx_df, data_count_df = data_count_df))
 }
 
-calc_usage_func <- function(df, interval)
+#limit_n = 4/interval, here 4 is number of hours, interval usually is 15 mins, so there are 16 points in 4 hours
+#x is index where demand is na
+#x = which(is.na(temp_df$demand))
+calc_usage_func <- function(df, interval, hour = 4)
 { 
-	temp = df %>% mutate(approx = na.approx(demand, na.rm = FALSE))
+  limit_n = hour/interval
+
+	temp = df %>% mutate(approx = na.approx(demand, maxgap = limit_n, na.rm = FALSE))
 	df$approx = temp$approx
 	df$usage = df$demand * interval
   df = subset(df, !is.na(df$approx))
@@ -266,13 +271,16 @@ fixed_time <- function(date_vec)
 { 
   if (grepl('/', date_vec[1]))
   {
-      date_vec = strptime(date_vec, format = "%m/%d/%y %H:%M")
+      date_vec_final = strptime(date_vec, format = "%m/%d/%y %H:%M")
+      if (is.na(date_vec_final[1])){
+        date_vec_final = strptime(date_vec, format = "%m/%d/%Y %H:%M")
+      }
   }else
   {
-      date_vec = strptime(date_vec, format = "%Y-%m-%d %H:%M")
+      date_vec_final = strptime(date_vec, format = "%Y-%m-%d %H:%M")
   }
 
-  return(date_vec)
+  return(date_vec_final)
 }
 
 dup_fixer <- function(df, dup)
@@ -285,14 +293,15 @@ dup_fixer <- function(df, dup)
   }
 
   df_duff = df[!(duplicated(df$date)),]
-  row.names(df_duff) = c(1:nrow(df_duff))
-  dup_row = as.numeric(row.names(subset(df_duff, df_duff$date %in% avg_df$date)))
   for (i in meter){
-    df_duff[dup_row, i] = avg_df[, i]
+    for (date_i in avg_df$date){
+      row_i = match(date_i, df_duff$date)
+      row_i = row_i[!is.na(row_i)]
+      df_duff[row_i, i] = subset(avg_df[i], avg_df$date == date_i)
+    }
   }
   df_duff[is.na(df_duff)] = NA
   return(df_duff)
-
 }
 
 main_dup <- function(df){
@@ -383,10 +392,10 @@ make_load_stat_table <- function(df){
 }
 
 #use temp_df, output from prepare_data_func
-make_heatmap_matrix <- function(df){
+make_heatmap_matrix <- function(df, meter){
   df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
   df$week_name = paste(df$year, df$week_number, sep = '-')
-  df_mat = dcast(df, week_name ~ index_hour_point, fill = NA, value.var = 'demand')
+  df_mat = dcast(df, week_name ~ index_hour_point, fill = NA, value.var = meter)
   return(df_mat)
 }
 
@@ -428,4 +437,70 @@ make_segment_line <- function(week_vec, p = plot_ly()){
   }
   return(p)
 } 
+
+check_time <- function(time_vec, col_vec){
+  interval = as.numeric(difftime(time_vec[2],time_vec[1], units = 'hours'))
+  time_seq = seq(from=time_vec[1], by=interval*60*60, to=time_vec[length(time_vec)])
+  time_missing = time_seq[!(as.character(time_seq) %in% as.character(time_vec))]
+  df0 = matrix(data=NA,nrow=length(time_missing),ncol=length(col_vec))
+  colnames(df0) = col_vec
+  df0 = data.frame(df0)
+  df0$date = time_missing
+  return(df0)
+}
+
+initial_prep_data_func <- function(df){
+  colnames(df)[colnames(df) %in% c('Interval End', 'Interval.End', 'Date Time', 'Date.Time', 'Date', 'date', 'date time', 'date.time') ] <-  'date'
+  if (df$date[nrow(df)] == 'Total SUM'){
+    df = df[c(1:(nrow(df)-1)),]
+  }
+  return(df)
+}
+
+
+#NOT WORK WITH BIG VECTOR
+#limit_n = 4*interval
+#x is index where demand is na
+#x = which(is.na(temp_df$demand))
+eliminate_gap_recur <- function(x, limit_n, vec = c(), i_end = 0){
+
+  if(length(x) == 0 | length(x) == 1)
+  { 
+    return(vec)
+  }
+
+  limit_i = x[1] + limit_n - 1
+
+  if (x[1] - i_end == 1){
+    i_end = x[1]
+    x = x[2:length(x)]
+    vec = eliminate_gap_recur(x, limit_n, vec, i_end)
+  }else{
+    vec = c(vec, x[x <= limit_i])
+    x = x[x > limit_i]
+    i_end = vec[length(vec)]
+    vec = eliminate_gap_recur(x, limit_n, vec, i_end)
+  }
+}
+
+#limit_n = 4*interval
+#x is index where demand is na
+#x = which(is.na(temp_df$demand))
+eliminate_gap_func <- function(x, limit_n){
+  vec = c()
+  i_end = 0
+  while (length(x) != 0 & length(x) != 1){
+    limit_i = x[1] + limit_n - 1
+
+    if (x[1] - i_end == 1){
+      i_end = x[1]
+        x = x[2:length(x)]
+    }else{
+        vec = c(vec, x[x <= limit_i])
+        x = x[x > limit_i]
+        i_end = vec[length(vec)]
+    }
+  }
+  return(vec)
+}
 
