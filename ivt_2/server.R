@@ -66,7 +66,7 @@ server <- function(input, output){
   		{
   			return(NULL)
   		}
-  		df = temp_df()[,c('date', input$meter, 'y_m_d', 'year', 'week_number', 'hour','hour_point','weekday','weekday_flag')]
+      df = temp_df()
   		colnames(df)[colnames(df) == input$meter] <-  'demand'
   		calc_list = calc_usage_func(df, interval_n())
       df = calc_list$df
@@ -104,7 +104,7 @@ server <- function(input, output){
   		})
 
     heatmap_mat <- reactive({
-      make_heatmap_matrix(temp_df(), input$meter)
+      make_heatmap_matrix(inter_df())
       })
 
   	agg_df <- reactive({week_match_func(inter_df())})
@@ -245,7 +245,7 @@ server <- function(input, output){
     }, rownames = TRUE, width = "auto")
 
   output$heatmap_plot <- renderPlotly({
-    plot_weekly_heatmap(heatmap_mat(), temp_df())
+    plot_weekly_heatmap(heatmap_mat(), inter_df())
     })
 
 }

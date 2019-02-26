@@ -393,17 +393,17 @@ make_load_stat_table <- function(df){
 }
 
 #use temp_df, output from prepare_data_func
-make_heatmap_matrix <- function(df, meter){
+make_heatmap_matrix <- function(df){
   df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
   df$week_name = paste(df$year, df$week_number, sep = '-')
-  df_mat = dcast(df, week_name ~ index_hour_point, fill = NA, value.var = meter)
+  df_mat = dcast(df, week_name ~ index_hour_point, fill = NA, value.var = 'approx')
   return(df_mat)
 }
 
 #use output from make_heatmap_matrix
-plot_weekly_heatmap <- function(df, temp_df){
+plot_weekly_heatmap <- function(df, inter_df){
   x = colnames(df)[2:ncol(df)]
-  week_vec = make_week_vec(temp_df)
+  week_vec = make_week_vec(inter_df)
   m = as.matrix(df[,c(2:ncol(df))])
 
   text_x = c('Sun-Midnight', 'Sun-Noon', 'Mon-Midnight', 'Mon-Noon', 'Tue-Midnight', 'Tue-Noon', 'Wed-Midnight', 'Wed-Noon', 'Thu-Midnight', 'Thu-Noon', 'Fri-Midnight', 'Fri-Noon', 'Sat-Midnight', 'Sat-Noon')
