@@ -7,6 +7,7 @@ ui <- fluidPage(
   sidebarPanel(
     fileInput("interval_file", "Choose Interval Data CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
     fileInput("oat_file", "Choose Temperature CSV File", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")),
+    uiOutput("time_col_id"),
     uiOutput("meter_id"),
     uiOutput("year_id")
   ),

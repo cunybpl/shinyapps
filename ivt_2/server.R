@@ -3,14 +3,26 @@ library(plotly)
 library(DT)
 
 server <- function(input, output){
+
+  org_df <- reactive({
+    inFile <- input$interval_file
+    if (is.null(inFile))
+        return(NULL)
+    read.csv(inFile$datapath)
+    })
+
+  output$time_col_id <- renderUI({
+      tagList(
+        selectInput('time_col', 'Choose Date time column', colnames(org_df()), selected = NULL, multiple = FALSE,selectize = TRUE, width = NULL, size = NULL)
+      )
+    })
+
 	inter_org_df <- reactive({
-	    inFile <- input$interval_file
-
-	    if (is.null(inFile))
-	      return(NULL)
-
-	    df = read.csv(inFile$datapath)
-	    initial_prep_data_func(df)
+      if (is.null(org_df()))
+      {
+        return(NULL)
+      }
+	    initial_prep_data_func(org_df(), input$time_col)
   	})
 
   inter_null <- reactive({is.null(inter_org_df())})

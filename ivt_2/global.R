@@ -24,7 +24,7 @@ prepare_data_func <- function(df)
   #df$index_hour_point = df$hour_point + (df$weekday_num - 1)*24
   #df$week_start = as.Date(paste(df$year, df$week_number, df$weekday_num, sep="-"), "%Y-%U-%u")
   #df$weekrange = paste(df$week_start, '', '-', '', df$week_start + 6)
-  df$week_name = paste('Week', df$weekday_num, ', ', df$year, sep = '')
+  #df$week_name = paste('Week', df$weekday_num, ', ', df$year, sep = '')
 	return(df)
 }
 
@@ -43,7 +43,7 @@ count_func <- function(df, interval)
   not_weekday_count = length(date_vec[is.holiday(date_vec) | is.weekend(date_vec)])
   weekday_count = date_count - not_weekday_count
 
-  approx_df = data.frame(total_points = nrow(df), approx_point = length(subset(df$date, is.na(df$demand))))
+  approx_df = data.frame(total_points = nrow(df), approx_point = length(subset(df$date, is.na(df$demand) & !is.na(df$approx))))
   colnames(approx_df) = c('Number of Points', 'Number of Interpolated Points')
 
   data_count_df = data.frame(hour = total_hour_count, day = weekday_count, weekend = not_weekday_count)
@@ -62,23 +62,24 @@ calc_usage_func <- function(df, interval, hour = 4)
 
 	temp = df %>% mutate(approx = na.approx(demand, maxgap = limit_n, na.rm = FALSE))
 	df$approx = temp$approx
-	df$usage = df$demand * interval
-  df = subset(df, !is.na(df$approx))
-  final_na_point = nrow(subset(df, is.na(df$approx)))
+	df$usage = df$approx * interval
+  df0 = subset(df, !is.na(df$approx))
+  final_na_point = nrow(subset(df0, is.na(df0$approx)))
 	return(list(df = df, final_na_point = final_na_point))
 }
 
 #mod
+#reverse this method, add two lines, turn off the legend
 plot_weekly <- function(year_df, week_i, interval = NULL)
 {
 	  temp_week_df = subset(year_df, year_df$week_number == week_i)
-	  approx_week_df = subset(temp_week_df, is.na(temp_week_df$demand))
-	  approx_week_df$usage = approx_week_df$approx*interval
+    approx_df = subset(temp_week_df, is.na(temp_week_df$demand) & !is.na(temp_week_df$approx))
+
 	  week_name = paste('(Week ', week_i, ')', sep ='')
 	  graph_title = paste(temp_week_df$y_m_d[1], '-', temp_week_df$y_m_d[nrow(temp_week_df)], week_name)
 	  p1 = add_trace(p = plot_ly(), x = ~temp_week_df$hour_point, y = ~temp_week_df$usage, type ='scatter', mode = 'lines', color = ~temp_week_df$weekday) %>%
 	        layout(title = graph_title, xaxis = list(title = 'Hours', zeroline = FALSE, showline = FALSE),yaxis = list(title= 'Usage (kWh)', zeroline = FALSE, showline = FALSE, rangemode = 'tozero'))
-	  p1 = add_trace(p = p1, x = ~approx_week_df$hour_point, y = ~approx_week_df$usage, type ='scatter', mode = 'lines', line = list(dash = 'dash'), color = ~approx_week_df$weekday)
+	  p1 = add_trace(p = p1, x = ~approx_df$hour_point, y = ~approx_df$usage, type ='scatter', mode = 'markers', marker = list(symbol = 'circle-open', size = '9'), color = ~approx_df$weekday)
 }
 
 week_match_func <- function(df, type_flag = 'approx')
@@ -123,9 +124,9 @@ prepare_oat_func <- function(oat_df, time_vec)
 
 calc_mean_sd_func <- function(df)
 {
-  temp <- ddply(df, c('weekday', 'hour'), summarise, length = mean(approx))
+  temp <- ddply(df, c('weekday', 'hour'), summarise, length = mean(approx, na.rm = TRUE))
   colnames(temp) = c('weekday', 'hour', 'avg')
-  temp$stat_dev = ddply(df, c('weekday', 'hour'), summarise, length = sd(approx))$length
+  temp$stat_dev = ddply(df, c('weekday', 'hour'), summarise, length = sd(approx, na.rm = TRUE))$length
   temp$length = ddply(df, c('weekday', 'hour'), summarise, length = length(approx))$length
   temp$error = qt(0.975, df=temp$length-1)*temp$stat_dev/sqrt(temp$length)
   temp$upper_lim = temp$avg + temp$error
@@ -195,7 +196,7 @@ plot_timeseries_agg_func <- function(oat_df, df, agg_oat, agg_df){
       type = "scatter", mode = "lines", line = list(color = "rgba(243, 154, 36, 1)", width = 5), 
       name = "Weekly Avg OAT", yaxis = "y2") %>% add_trace( x = ~df$date, 
       y = ~df$approx, type = "scatter", mode = "lines", line = list(color = "rgba(51, 113, 213, 0.9)", width = 0.7), 
-      name = "Demand") %>% add_trace(x = ~agg_df$date, y = ~agg_df$approx, type = 'scatter', mode = 'lines', line = list(width = 5, color = 'rgba(51, 113, 213, 1)'), name = 'Weekly Average') %>%
+      name = "Demand", connectgaps = FALSE) %>% add_trace(x = ~agg_df$date, y = ~agg_df$approx, type = 'scatter', mode = 'lines', line = list(width = 5, color = 'rgba(51, 113, 213, 1)'), name = 'Weekly Average') %>%
       layout(title = "Time Series", 
       yaxis2 = ay, yaxis = list(title = "Demand (kW)", rangemode = 'tozero', zeroline = FALSE, showline = FALSE), margin = list(b = 100), 
       xaxis = list(type = "date", title = "Date", zeroline = FALSE, showline = FALSE))
@@ -365,8 +366,8 @@ plot_duration_curve <- function(df, weekday_flag_n, p1 = plot_ly()){
 #use inter_df
 make_load_df <- function(df){
   df_load = data.frame(date = unique(df$y_m_d))
-  df_load$base_load = aggregate(df[,'approx'], list(df$y_m_d), quantile, probs = c(.025))$x
-  df_load$peak_load = aggregate(df[,'approx'], list(df$y_m_d), quantile, probs = c(.975))$x
+  df_load$base_load = aggregate(df[,'approx'], list(df$y_m_d), quantile, probs = c(.025), na.rm = TRUE)$x
+  df_load$peak_load = aggregate(df[,'approx'], list(df$y_m_d), quantile, probs = c(.975), na.rm = TRUE)$x
   df_load$peak_ratio = df_load$base_load/df_load$peak_load
   colnames(df_load) = c('Date', 'Baseload', 'Peak', 'Base to Peak ratio')
   return(df_load)
@@ -374,9 +375,9 @@ make_load_df <- function(df){
 
 #use output from make_load_df
 calc_load_stat_func <- function(x, load_type){
-  x_mean = mean(x)
-  x_median = median(x)
-  x_sd = sd(x)
+  x_mean = mean(x, na.rm = TRUE)
+  x_median = median(x, na.rm = TRUE)
+  x_sd = sd(x, na.rm = TRUE)
   df = data.frame(stat = c(x_mean,x_median, x_sd), row.names = c('Mean', 'Median', 'Standard Deviation'))
   colnames(df) = load_type
   return(df)
@@ -449,8 +450,9 @@ check_time <- function(time_vec, col_vec){
   return(df0)
 }
 
-initial_prep_data_func <- function(df){
-  colnames(df)[colnames(df) %in% c('Interval End', 'Interval.End', 'Date Time', 'Date.Time', 'Date', 'date', 'date time', 'date.time') ] <-  'date'
+initial_prep_data_func <- function(df, time_col){
+  #colnames(df)[colnames(df) %in% c('Interval End', 'Interval.End', 'Date Time', 'Date.Time', 'Date', 'date', 'date time', 'date.time') ] <-  'date'
+  colnames(df)[colnames(df) == time_col] = 'date'
   if (df$date[nrow(df)] == 'Total SUM'){
     df = df[c(1:(nrow(df)-1)),]
   }
