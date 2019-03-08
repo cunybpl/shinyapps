@@ -903,6 +903,7 @@ lean_table_handler <- function(lean_df, energy, b_df){
   df = subset(df, df$bdbid %in% b_df$bdbid)
   df = df[,c('bdbid', "cooling_change_point_numeric_rank", "cooling_sensitivity_numeric_rank", "heating_change_point_numeric_rank", "heating_sensitivity_numeric_rank", "baseload_numeric_rank")]
   colnames(df) = c('bdbid', 'Cooling Change Point Numeric Rank', 'Cooling Sens Numeric Rank', 'Heating Change Point Numeric Rank', 'Heating Sens Numeric Rank', 'Baseload Numeric Rank')
+  df = df[order(df$bdbid),]
   df$bdbid = subset(b_df$name, b_df$bdbid %in% df$bdbid)
   return(list(df = df, total_num = total_num))
 }
@@ -910,6 +911,43 @@ lean_table_handler <- function(lean_df, energy, b_df){
 point_lookup <- function(breakdown_df, x){
   bdbid = subset(breakdown_df$bdbid, breakdown_df$total_bldg_gross_sq_ft == x)
   return(bdbid)
+}
+
+make_model_info_table <- function(best_model, b_df){
+  if (is.null(best_model) | is.null(b_df)){
+    return(NULL)
+  }
+  df = data.frame(bdbid = b_df$bdbid, name = b_df$name, elec_model = NA, fuel_model = NA)
+  df = df[order(df$bdbid),]
+  for (bdbid_n in df$bdbid){
+    best_df = subset(best_model, best_model$bdbid == bdbid_n)
+    model_vec = get_model_information(best_df)
+    df$elec_model[df$bdbid == bdbid_n] = model_vec[1]
+    df$fuel_model[df$bdbid == bdbid_n] = model_vec[2]
+  }
+  df = df[,c('name', 'elec_model', 'fuel_model')]
+  colnames(df) = c('bdbid', 'Elec Model', 'Fuel Model')
+
+  return(df)
+}
+
+get_model_information <- function(best_df){
+  if(nrow(best_df) == 0){
+    return(c(NA,NA))
+  }
+
+  final_vec = c()
+  for (energy in c('Elec','Fuel')){
+    model = best_df$model[best_df$energy_type == energy]
+    if (length(model))
+    {
+      final_vec = c(final_vec, model)
+    }else
+    {
+      final_vec = c(final_vec, NA)
+    }
+  }
+  return(final_vec)
 }
 
 

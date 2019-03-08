@@ -51,7 +51,10 @@ shinyServer(function(input, output, session) {
                 h4(textOutput('build_count_fuel')),
                 br(),
                 dataTableOutput('lean_fuel_table'),
-                br(), br()
+                br(), br(),
+                h4('Model Information of Buildings'),
+                dataTableOutput('model_table'),
+                br()
                 ),
               tabPanel("Graphs & Tables for Elec",
             h3("Building Information"),
@@ -279,6 +282,7 @@ shinyServer(function(input, output, session) {
     return(df)
   })
 
+  #just getting necessary columns
   #all the buildings from building info, given agency and functions and blah blah
   b_df0 <- reactive({
       comb = paste(binfo_df()$bdbid, binfo_df()$building_name, sep = ' - ') #look this shit is happy
@@ -298,7 +302,9 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }else
     { 
-      return(subset(b_df0(), b_df0()$bdbid %in% breakdown_df()$bdbid))
+      df = subset(b_df0(), b_df0()$bdbid %in% breakdown_df()$bdbid)
+      df = df[order(df$bdbid),]
+      return(df)
     }
     })
 
@@ -453,10 +459,6 @@ shinyServer(function(input, output, session) {
 
   lean_df_elec <- reactive({
     lean_table_handler(lean_df(), 'Elec', b_df())
-    })
-
-  total_lean_elec <- reactive({
-
     })
 
   num_lean_fuel <- reactive({
@@ -739,5 +741,13 @@ shinyServer(function(input, output, session) {
   output$lean_fuel_table <- renderDataTable({
     lean_df_fuel()$df
     }, rownames = FALSE)
+
+  ##########################################
+  ############### Models ###################
+  ##########################################
+
+  output$model_table <- renderDataTable({
+    make_model_info_table(best_model(),b_df())
+    })
 
 })
