@@ -1,0 +1,10 @@
+name: portfolio_dashboard
+title:
+username:
+account: cunybpl
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 781674
+bundleId: 1931520
+url: https://cunybpl.shinyapps.io/portfolio_dashboard/
+when: 1552328589.0598
