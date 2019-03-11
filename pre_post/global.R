@@ -147,7 +147,7 @@ plot_model <- function(x, model, B, cp1, cp2, energy, pre_key, unit, p1 = plot_l
   }else
   { 
     x = c(x0, xf)
-    estimated = yInter_1 + slope1*x 
+    estimated = Ycp + slope1*x 
   }
 
   if (unit){

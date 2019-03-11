@@ -57,7 +57,7 @@ plot_model <- function(x, model, B, cp1, cp2, key, unit, bw, p1 = plot_ly(), sou
   }else
   { 
     x = c(x0, xf)
-    estimated = yInter_1 + slope1*x 
+    estimated = Ycp + slope1*x 
   }
 
   if (unit){
