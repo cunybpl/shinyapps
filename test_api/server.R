@@ -184,7 +184,7 @@ shinyServer(function(input, output, session) {
 
   user_input <- reactiveValues(authenticated = FALSE, status = "")
   observeEvent(input$login_button, {
-      cache_init()
+      cache_init(base_url = 'staging', api_url = 'https://api.dev.cunybplservices.fun/')
       result = tryCatch({
                     fetch_auth_token(input$user_name, input$password)},
                     error = function(e){NULL}
@@ -217,13 +217,13 @@ shinyServer(function(input, output, session) {
 
 
   lean_category_df <- reactive({
-    df = fetch_request('portfolios/', query_params=list(page = 1))$result
-    df$lean_category = trimws(df$lean_category)
-    df$char_n = nchar(trimws(df$lean_category))
-    df$primary_fun = 1
-    df$primary_fun[df$char_n <= 5] = 0
-    df$primary_fun[df$lean_category == 'Zoo'] = 1
-    df
+    agency_df = fetch_request('portfolios/buildings/available-agencies/', query_params=list(page = 1))
+    fun_df = fetch_request('portfolios/buildings/available-building-types/',query_params=list(page = 1))
+    colnames(agency_df) = 'lean_category'
+    colnames(fun_df) = 'lean_category'
+    agency_df$primary_fun = 0
+    fun_df$primary_fun = 1
+    rbind(fun_df,agency_df)
     })
 
   output$category_wiggy <- renderUI({
