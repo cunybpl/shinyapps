@@ -75,12 +75,16 @@ server <- function(input, output, session) {
   observe({best_df()$model_type[1]})
 
   post_df <- reactive({
+    if (is.null(util_df()) | length(best_df()) == 0){
+      return(NULL)
+    }
     main_post_model(util_df(), best_df(), input$lean_flag)
     })
 
   observe({
-    post_df()$model_type[1]
-    showNotification("Finished running post modeller", duration = 60, type = 'message')
+    if (length(post_df())){
+      showNotification("Finished running post modeller", duration = 60, type = 'message')
+    }
     })
 
   output$best_download <- downloadHandler(

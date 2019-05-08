@@ -330,10 +330,10 @@ co2_value_get <- function(breakdown_df, bdbid_n)
 
 percent_figure0 <- function(x)
 { 
-  x = x/100
-  x1 <- c(0.25, 0.25, 0.25, 0.25)
-  x2 <-c(0.5, 0.5, 0.5, 0.5)
-  x3 <- c(0.25, 0.25, 0.25, 0.25)
+  x = x*100
+  x1 <- c(25, 25, 25, 25)
+  x2 <-c(50, 50, 50, 50)
+  x3 <- c(25, 25, 25, 25)
 
   y = c('Baseload','Change-point', 'Heating Sensitivity', 'Cooling Sensitivity')
   q <- plot_ly() %>%
@@ -748,9 +748,9 @@ check_sqft_na <- function(df)
 
 percent_figure <- function(x, co2_flag = FALSE)
 {
-  x = x/100
-  m1 = matrix(data = seq(0,1,length.out = 1000), nrow = 1, ncol = 1000)
-  x1 = seq(0,1,length.out = 1000)
+  x = x*100
+  m1 = matrix(data = seq(0,100,length.out = 10000), nrow = 1, ncol = 10000)
+  x1 = seq(0,100,length.out = 10000)
 
   len_key = length(x)
   height_n = 300
@@ -767,7 +767,7 @@ percent_figure <- function(x, co2_flag = FALSE)
     width_n = 700
     if (co2_flag)
     { 
-      x = x*100
+      #x = x*100
       y = c('Site EUI Rank', 'Site CO2e kg/sqft', 'Source EUI Rank', 'Source CO2e kg/sqft')
       margin_l = 150
     }else
@@ -793,14 +793,14 @@ percent_figure <- function(x, co2_flag = FALSE)
 
   if(len_key == 4)
   {
-      p = subplot(p1,p2,p3,p4, nrows = 4, heights = c(0.2,0.22,0.22,0.2), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(0.125,0.5,0.875), ticktext = c('Good','Average','Poor')))
+      p = subplot(p1,p2,p3,p4, nrows = 4, heights = c(0.2,0.22,0.22,0.2), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(12.5,50,87.5), ticktext = c('Good','Average','Poor')))
       return(p)
   }else
   {
       p5 = add_trace(p = plot_ly(width = width_n, height = height_n), x = x1, y= y[5], z = m1, colors = colorRamp(color_vec), type = "heatmap", showscale = FALSE) %>% layout(yaxis = list(tickcolor = 'white', showline = FALSE, zeroline = FALSE, showgrid = FALSE), margin = list(l = margin_l))
       p5 = add_trace(p = p5, x = ~x[5], y= ~y[5], type = 'scatter', mode = 'markers', marker = list(symbol = "line-ns-open", color = 'black', size = bar_size, line = list(width = 3)), showlegend = FALSE, name = y[5])
 
-      p = subplot(p1,p2,p3,p4,p5, nrows = 5, heights = c(0.15,0.17,0.17,0.17,0.15), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(0.125,0.5,0.875), ticktext = c('Good','Average','Poor')))
+      p = subplot(p1,p2,p3,p4,p5, nrows = 5, heights = c(0.15,0.17,0.17,0.17,0.15), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(12.5,50,87.5), ticktext = c('Good','Average','Poor')))
       return(p)
   }
 
