@@ -951,3 +951,24 @@ get_model_information <- function(best_df){
 }
 
 
+
+chunky_paginator <- function(url = '', bdbid_vec = c(), query_params = list(), chunky_vec = NULL){
+  if(is.null(chunky_vec)){
+    query_params$bdbid = paste0(bdbid_vec, collapse = ',')
+    final_df = paginator_fetch_request(url, query_params=query_params)$result
+    return(final_df)
+  }
+
+  iter_len = length(chunky_vec) - 1
+  final_df = data.frame()
+  for (i in c(1:iter_len)){
+    start_i = chunky_vec[i]
+    end_i = ifelse(i == iter_len, chunky_vec[i+1], chunky_vec[i+1]-1)
+    bdbid_str = paste0(bdbid_vec[start_i:end_i], collapse = ',')
+    query_params$bdbid = bdbid_str
+    df = paginator_fetch_request(url, query_params=query_params)$result
+    final_df = rbind(final_df, df)
+  }
+  return(final_df)
+}
+

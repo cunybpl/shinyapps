@@ -289,7 +289,15 @@ shinyServer(function(input, output, session) {
       b_df = data.frame(bdbid = binfo_df()$bdbid, name = comb, primary_fun = binfo_df()$epapm_primary_function, oper_agency = binfo_df()$oper_agency_acronym)
   })
 
-  bdbid_vec <- reactive({paste0(b_df0()$bdbid, collapse = ',')})
+  chunky_vec <- reactive({
+    rows = nrow(b_df0())
+    if (rows > 500){
+      chunky_vec = c(seq(1, rows, 500), rows)
+    }else{
+      chunky_vec = NULL
+    }
+    chunky_vec
+    })
 
   null_drop <- reactive({
     is.null(b_df()$name)
@@ -366,7 +374,9 @@ shinyServer(function(input, output, session) {
   })
 
   best_model <- reactive({
-    df = paginator_fetch_request('portfolios/changepoint-model/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, best = 1, page_size = 1000))$result
+    query_params=list(fiscal_year = input$fiscal_year, best = 1, page_size = 1000)
+    df = chunky_paginator(url = 'portfolios/changepoint-model/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
+    #df = paginator_fetch_request('portfolios/changepoint-model/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, best = 1, page_size = 1000))$result
     
     if (length(df))
     {
@@ -395,14 +405,17 @@ shinyServer(function(input, output, session) {
     { 
       return(NULL)
     }
-    df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
+
+    query_params=list(fiscal_year = input$fiscal_year, page_size = 1000)
+    df = chunky_paginator(url = 'portfolios/bestmodel-loads-sensitivity/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
+    #df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     post_cols = c("sitename", 'period', 'percent_cooling', 'percent_heating', 'percent_baseload', "session_id")
     df = missing_cols_handler(post_cols, df)
     return(df)
     })
 
   lean_df <- reactive({
-    df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
+    df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(bdbid = bdbid_n(),fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
     if(length(df) == 0 | null_drop())
     {
       return(NULL)
@@ -411,7 +424,7 @@ shinyServer(function(input, output, session) {
     })
 
   co2eui_df <- reactive({
-    df = paginator_fetch_request('portfolios/co2eui-lean-rank/', query_params=list(fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
+    df = paginator_fetch_request('portfolios/co2eui-lean-rank/', query_params=list(bdbid = bdbid_n(), fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
     if(length(df) == 0)
     {
       return(NULL)
@@ -420,7 +433,10 @@ shinyServer(function(input, output, session) {
   })
 
   breakdown_df <- reactive({
-    df = paginator_fetch_request('portfolios/co2eui-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
+
+    query_params = list(fiscal_year = input$fiscal_year, page_size = 1000)
+    df = chunky_paginator(url = 'portfolios/co2eui-breakdown/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
+    #df = paginator_fetch_request('portfolios/co2eui-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     if(length(df) == 0)
     {
       return(NULL)
@@ -429,7 +445,10 @@ shinyServer(function(input, output, session) {
   })
 
   energy_df <- reactive({
-    df = paginator_fetch_request('portfolios/energy-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
+
+    query_params=list(fiscal_year = input$fiscal_year, page_size = 1000)
+    df = chunky_paginator(url = 'portfolios/energy-breakdown/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
+    #df = paginator_fetch_request('portfolios/energy-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     if(length(df) == 0)
     { 
       return(NULL)
@@ -518,11 +537,11 @@ shinyServer(function(input, output, session) {
       return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points'))
     }
     if(bdbid_n() %in% unique(co2eui_df()$bdbid))
-    { 
+    { print('good')
       co2_rank = co2_rank_get(co2eui_df(), bdbid_n())
       return(percent_figure(co2_rank, co2_flag = TRUE))
     }else
-    {
+    { 
       return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points'))
     }
   })
