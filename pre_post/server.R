@@ -10,7 +10,9 @@ server <- function(input, output, session) {
     if (is.null(inFile))
       return(NULL)
 
-    read.csv(inFile$datapath)
+    df = read.csv(inFile$datapath)
+    colnames(df)[colnames(df) == 'period'] = 'n'
+    df
     })
 
   best_model <- reactive(({
@@ -45,7 +47,7 @@ server <- function(input, output, session) {
     {
       return(NA)
     }else{
-      
+
       return(subset(org_util_df()$project_id, org_util_df()$timestamp == input$session))
     }
     })
@@ -114,14 +116,14 @@ server <- function(input, output, session) {
 
   b_df <- reactive({
     if(!is.null(binfo_df()))
-    { 
+    {
       temp_index = unique(match(temp_df()$bdbid, binfo_df()$bdbid))
       b_name = binfo_df()$building_name[temp_index]
       b_id = binfo_df()$bdbid[temp_index]
       comb = paste(b_id, b_name, sep = ' - ')
       b_df = data.frame(bdbid = b_id, name = comb)
     }else
-    { 
+    {
       bdbid = unique(temp_df()$bdbid)
       b_df = data.frame(bdbid = bdbid, name = bdbid)
     }
@@ -139,7 +141,7 @@ server <- function(input, output, session) {
     {
       list(binfo_df1 = data.frame(), binfo_df1 = data.frame())
     }else
-    { 
+    {
       binfo_table(binfo_df(), bdbid_n())
     }
   })
@@ -157,7 +159,7 @@ server <- function(input, output, session) {
         }
         #click_n() = click_n() + 1
   })
-    
+
   observeEvent(input$nextBin, {
         current <- which(b_df()$bdbid  == bdbid_n())
         if(current < length(b_df()$name)){
@@ -172,7 +174,7 @@ server <- function(input, output, session) {
     b_df()$bdbid[b_df()$name == input$bdbid]
   })
 
-  
+
   ################################################
   ################## PREPARE FILE ################
   ################################################
@@ -203,7 +205,7 @@ server <- function(input, output, session) {
 
   output$plot_time_elec <- renderPlotly({
     if (elec_null_flag())
-    { 
+    {
       plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec')
     }else
     {
@@ -268,7 +270,7 @@ server <- function(input, output, session) {
 
   output$plot_time_fuel <- renderPlotly({
     if (fuel_null_flag())
-    { 
+    {
       plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Fuel')
     }else
     {
@@ -353,8 +355,8 @@ server <- function(input, output, session) {
           }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
         tableOutput(tablename1)
       }else
-      { 
-        linebreak <- paste("break", bdbid_n, sep="") 
+      {
+        linebreak <- paste("break", bdbid_n, sep="")
         output[[linebreak]] <- renderUI({HTML("<br/>")})
         uiOutput(linebreak)
       }
@@ -386,8 +388,8 @@ server <- function(input, output, session) {
           }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
         tableOutput(tablename2)
       }else
-      { 
-        linebreak2  <- paste("break2", bdbid_n, sep="") 
+      {
+        linebreak2  <- paste("break2", bdbid_n, sep="")
         output[[linebreak2]] <- renderUI({HTML("<br/>")})
         uiOutput(linebreak2)
       }
@@ -397,7 +399,7 @@ server <- function(input, output, session) {
 
     do.call(tagList, plot_output_list)
   })
-  
+
 
   ##############################################
   ########## BUILDING INFO AND HELP ############

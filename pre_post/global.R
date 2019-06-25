@@ -2,7 +2,7 @@ library(plotly)
 library(lubridate)
 
 plot_baseload <- function(util, energy, model, B, cp1 = 0, cp2 =0, b_name) #x,y -> data, B -> bestvalue$params, cp1,2 -> bestvalue$cp1,2
-{ 
+{
   options(digits=15)
   #util$end_date = strptime(x = util$end_date, format = "%Y-%m-%d")
 
@@ -63,8 +63,8 @@ get_baseload_point <- function(util, x, model, cp1, cp2, yInter_1, yInter_2 = 0,
   {
     util$adjust = ifelse(x > cp1, yInter_1 + slope1*x, Ycp)
   }else
-  { 
-    util$adjust = yInter_1 + slope1*x 
+  {
+    util$adjust = yInter_1 + slope1*x
   }
 
   util$post_adjust = ifelse(util$prepost == 3, util$adjust, NA)
@@ -72,7 +72,7 @@ get_baseload_point <- function(util, x, model, cp1, cp2, yInter_1, yInter_2 = 0,
 }
 
 plot_baseload_point <- function(util, energy)
-{ 
+{
   util$re_point = ifelse(is.na(util$pre)& is.na(util$post) & is.na(util$post_adjust), util$usage, NA)
   re_est = subset(util$estimated, !is.na(util$re))
 
@@ -106,7 +106,7 @@ flag_func <- function(df, bdbid_n, energy)
 }
 
 plot_model <- function(x, model, B, cp1, cp2, energy, pre_key, unit, p1 = plot_ly())
-{ 
+{
   options(digits=15)
   require(ggplot2)
   x = x[order(x)]
@@ -129,25 +129,25 @@ plot_model <- function(x, model, B, cp1, cp2, energy, pre_key, unit, p1 = plot_l
   }
 
   if (model == '5P')
-  { 
+  {
     x = c(x0, cp1, cp2, xf)
     estimated = ifelse(x <= cp1, yInter_1 + slope1*x, ifelse(x >= cp2, yInter_2 + slope2*x,Ycp))
   }else if (model  == '4P')
-  { 
+  {
     x = c(x0, cp1, xf)
     estimated =ifelse(x <= cp1, yInter_1 + slope1*x, yInter_2 + slope2*x)
   }else if (model == '3PH')
-  { 
+  {
     x = c(x0, cp1, xf)
     estimated = ifelse(x <= cp1, yInter_1 + slope1*x, Ycp)
   }else if (model == '3PC')
-  { 
+  {
     x = c(x0, cp1, xf)
     estimated = ifelse(x > cp1, yInter_1 + slope1*x, Ycp)
   }else
-  { 
+  {
     x = c(x0, xf)
-    estimated = Ycp + slope1*x 
+    estimated = Ycp + slope1*x
   }
 
   if (unit){
@@ -173,13 +173,13 @@ plot_model <- function(x, model, B, cp1, cp2, energy, pre_key, unit, p1 = plot_l
 
 
   model_fig = add_trace(p = p1,  x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n), name = name_n, inherit = FALSE)
-  
+
   return(model_fig)
 }
 
 
 plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), b_name = '')
-{ 
+{
   util_act = subset(df, df$z == 'Act')
   util_est = subset(df, df$z == 'Est')
 
@@ -209,7 +209,7 @@ plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), b_name = '')
 
 
 params_list <- function(best_model, bdbid, energy, prepost)
-{ 
+{
   options(digits=15)
   model = best_model$model_type[best_model$bdbid == bdbid & best_model$energy_type == energy & best_model$prepost == prepost]
 
@@ -225,7 +225,7 @@ params_list <- function(best_model, bdbid, energy, prepost)
 
 
 params_matrix <- function(params_vec)
-{ 
+{
   options(digits=15)
   if (params_vec$slope2 == 0)
   {
@@ -238,9 +238,10 @@ params_matrix <- function(params_vec)
 }
 
 plot_timeseries <- function(util, energy)
-{ 
+{
   #plot timeseries. Unlike pplot_timeseries function, it also plots points and the shape of the points is now adjusted (Act or Est)
   options(digits=15)
+  util = util[order(util[, 'end_date']),]
   util$estimated = ifelse(util$estimated == 1, 'Est', ifelse(util$estimated == 2, 'Agg', 'Act'))
 
   util_act = subset(util, util$estimated == 'Act')
@@ -310,7 +311,7 @@ savings_table <- function(uncertainty_df, savings_df, bdbid_n, energy){
 
 
 post_output <- function(post_df,  bdbid_n, energy)
-{  
+{
   options(digits=15)
   if (bdbid_n %in% unique(post_df$bdbid) & energy %in% unique(post_df$energy_type[post_df$bdbid == bdbid_n]))
   {
@@ -345,7 +346,7 @@ post_output <- function(post_df,  bdbid_n, energy)
 
 
 post_col <- function(post_df, n, energy)
-{ 
+{
   options(digits=15)
   if (length(post_df))
   {
@@ -368,10 +369,10 @@ post_col <- function(post_df, n, energy)
 }
 
 stat_table <- function(best_model, bdbid_n, energy_n)
-{ 
+{
   options(digits=15)
   if (flag_func(best_model, bdbid_n, energy_n))
-  { 
+  {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'n')]
   }else
@@ -383,8 +384,8 @@ stat_table <- function(best_model, bdbid_n, energy_n)
 
 
 main_plot_model <- function(util, best_model, bdbid_n, energy, b_name = '')
-{ 
-  options(digits=15) 
+{
+  options(digits=15)
 
 
   x1 = subset(util$OAT, util$prepost == 1)
@@ -401,7 +402,7 @@ main_plot_model <- function(util, best_model, bdbid_n, energy, b_name = '')
 
 
   if (flag_func(best_model, bdbid_n, energy))
-  {   
+  {
       params_pre = params_list(best_model, bdbid_n, energy, 1)
       params_post = params_list(best_model, bdbid_n, energy, 3)
 
@@ -413,7 +414,7 @@ main_plot_model <- function(util, best_model, bdbid_n, energy, b_name = '')
       pre_point_fig = plot_point(df1, energy, 1,post_plot_model)
       final_figure = plot_point(df3, energy, 3, pre_point_fig, b_name)
   }else
-  { 
+  {
     pre_point_fig = plot_point(df1, energy, 1, plot_ly())
     final_figure = plot_point(df3, energy, 3, pre_point_fig, b_name)
   }
@@ -422,7 +423,7 @@ main_plot_model <- function(util, best_model, bdbid_n, energy, b_name = '')
 
 
 main_plot_baseload <- function(util, best_model, bdbid_n, energy, b_name = '')
-{ 
+{
   if (flag_func(best_model, bdbid_n, energy))
   {
       params_pre = params_list(best_model, bdbid_n, energy, 1)
@@ -441,7 +442,7 @@ main_plot_baseload <- function(util, best_model, bdbid_n, energy, b_name = '')
 
 
 binfo_table <- function(binfo_df, bdbid_n)
-{ 
+{
   binfo_df = subset(binfo_df, bdbid == bdbid_n)
   location = paste(paste(binfo_df$city, binfo_df$state, sep = ', '), binfo_df$zip, sep =' ')
   b_id = paste("BDBID", binfo_df$bdbid, sep = ': ')
@@ -452,7 +453,7 @@ binfo_table <- function(binfo_df, bdbid_n)
 }
 
 get_building_name <- function(binfo_df, bdbid_n)
-{ 
+{
   if (is.null(binfo_df))
   {
     plot_title = as.character(bdbid_n)
@@ -465,7 +466,7 @@ get_building_name <- function(binfo_df, bdbid_n)
 }
 
 stat_param_table <- function(best_model, bdbid_n, energy_n)
-{ 
+{
   if (flag_func(best_model, bdbid_n, energy_n))
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
@@ -479,7 +480,7 @@ stat_param_table <- function(best_model, bdbid_n, energy_n)
 }
 
 params_table <- function(best_model, bdbid, energy)
-{ 
+{
   if(flag_func(best_model, bdbid, energy))
   {
     pl_pre = params_list(best_model, bdbid, energy, 1)
@@ -503,9 +504,9 @@ help_table <- function()
 }
 
 fixed_time <- function(util)
-{ 
+{
     if(!is.POSIXlt(util$end_date) & !is.POSIXt(util$end_date) & !is.POSIXct(util$end_date))
-  { 
+  {
     if (grepl('/', util$end_date[1]))
     {
       util$end_date = strptime(util$end_date, format = "%m/%d/%Y")
@@ -515,12 +516,12 @@ fixed_time <- function(util)
     }
   }
 
-  util$end_date = as.factor(util$end_date)
+  util$end_date = as.POSIXct(util$end_date)
   return(util)
 }
 
 missing_cols_handler <- function(cols, df)
-{ 
+{
   org_col = colnames(df)
   col_null = cols[!(cols %in% org_col)]
   df[,col_null] = NA
@@ -528,7 +529,7 @@ missing_cols_handler <- function(cols, df)
 }
 
 construct_saving_table <- function(saving_df, energy, bdbid_n, type_flag)
-{ 
+{
   if(is.null(saving_df))
   {
     return(NULL)
@@ -557,7 +558,7 @@ construct_saving_table <- function(saving_df, energy, bdbid_n, type_flag)
 
 
 plot_normalized_graph <- function(util, energy, b_name = '')
-{ 
+{
   util$end_date = strptime(util$end_date, format = "%Y-%m-%d")
   util$month = as.factor(month(util$end_date, label = TRUE, abbr = TRUE))
 
@@ -586,7 +587,7 @@ plot_normalized_graph <- function(util, energy, b_name = '')
   #post_act = add_trace(p = pre_act, x = ~util_post$month, y = ~util_post$usage, type ='scatter', mode = 'lines', line = list(color = 'rgba(109, 203, 15, 1)'), name = "Post Act Usage")
   pre_plot = add_trace(p = plot_ly(), x = ~util_pre$month, y = ~util_pre$normalized_usage, type ='scatter', mode = 'lines', line = list(color = usage_color, dash = 'dash'), name = "Pre Norm Usage")
   post_plot = add_trace(p = pre_plot, x = ~util_post$month, y = ~util_post$normalized_usage, type ='scatter', mode = 'lines',
-                        line = list(color = 'rgba(109, 203, 15, 1)', dash = 'dash'), name = "Post Normalized Usage") 
+                        line = list(color = 'rgba(109, 203, 15, 1)', dash = 'dash'), name = "Post Normalized Usage")
   pre_point = add_trace(p = post_plot, x = ~util_pre$month, y = ~util_pre$normalized_usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = usage_color, size = 9), name = 'Pre Norm point')
   post_point = add_trace(p = pre_point, x = ~util_post$month, y = ~util_post$normalized_usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = 'rgba(109, 203, 15, 1)', size = 9), name = 'Post Norm point') %>%
               layout(
@@ -599,12 +600,12 @@ plot_normalized_graph <- function(util, energy, b_name = '')
 
 
 filter_project_session <- function(df, session, project)
-{ 
+{
   if (project == 'NA' | session == 'NA')
-  { 
+  {
     return(df)
   }else
-  { 
+  {
     df = subset(df, df$project_id == project & df$timestamp == session)
     return(df)
   }
@@ -612,7 +613,7 @@ filter_project_session <- function(df, session, project)
 
 
 percent_heat_cool_func <- function(df)
-{ 
+{
   options(digits=15)
   df$percent_cooling = 100*df$cool_load/df$total_consumption
   df$percent_heating = 100*df$heat_load/df$total_consumption

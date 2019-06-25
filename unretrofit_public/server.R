@@ -8,6 +8,7 @@ server <- function(input, output, session) {
     if (is.null(inFile))
       return(NULL)
 
+    colnames(df)[colnames(df) == 'period'] = 'n'
     best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
     df = read.csv(inFile$datapath)
     df = missing_cols_handler(best_cols, df)
@@ -31,7 +32,7 @@ server <- function(input, output, session) {
     {
       return(temp_df0())
     }else
-    { 
+    {
       df_binfo = subset(binfo_df(), binfo_df()$oper_agency_acronym == input$category)
       utility = subset(temp_df0(), temp_df0()$bdbid %in% df_binfo$bdbid)
       return(utility)
@@ -107,14 +108,14 @@ server <- function(input, output, session) {
 
   b_df <- reactive({
     if(!is.null(binfo_df()))
-    { 
+    {
       temp_index = unique(match(temp_df()$bdbid, binfo_df()$bdbid))
       b_name = binfo_df()$building_name[temp_index]
       b_id = binfo_df()$bdbid[temp_index]
       comb = paste(b_id, b_name, sep = ' - ')
       b_df = data.frame(bdbid = b_id, name = comb)
     }else
-    { 
+    {
       bdbid = unique(temp_df()$bdbid)
       b_df = data.frame(bdbid = bdbid, name = bdbid)
     }
@@ -132,7 +133,7 @@ server <- function(input, output, session) {
     {
       list(binfo_df1 = data.frame(), binfo_df1 = data.frame())
     }else
-    { 
+    {
       binfo_table(binfo_df(), bdbid_n())
     }
   })
@@ -150,7 +151,7 @@ server <- function(input, output, session) {
         }
         #click_n() = click_n() + 1
   })
-    
+
   observeEvent(input$nextBin, {
         current <- which(b_df()$bdbid  == bdbid_n())
         if(current < length(b_df()$name)){
@@ -242,7 +243,7 @@ server <- function(input, output, session) {
   output$elec_timeseries <- renderPlotly({
 
     if (flag_func(temp_df(), bdbid_n(), 'Elec'))
-    { 
+    {
       util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Elec')
       plot_timeseries(util, 'Elec')
     }else
@@ -257,7 +258,7 @@ server <- function(input, output, session) {
 
   output$elec_sqft <- renderText({
     if (flag_func(temp_df(), bdbid_n(), 'Elec'))
-      { 
+      {
         sqft_col = subset(temp_df()$using_sqft, temp_df()$bdbid == bdbid_n() & temp_df()$energy_type == 'Elec')
         sqft_message(sqft_col)
       }else
@@ -329,7 +330,7 @@ server <- function(input, output, session) {
   output$fuel_timeseries <- renderPlotly({
 
     if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
-    { 
+    {
       util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Fuel')
       plot_timeseries(util, 'Fuel')
     }else
@@ -344,7 +345,7 @@ server <- function(input, output, session) {
 
   output$fuel_sqft <- renderText({
     if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
-      { 
+      {
         sqft_col = subset(temp_df()$using_sqft, temp_df()$bdbid == bdbid_n() & temp_df()$energy_type == 'Fuel')
         sqft_message(sqft_col)
       }else
@@ -436,8 +437,8 @@ server <- function(input, output, session) {
           }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
         tableOutput(tablename1)
       }else
-      { 
-        linebreak <- paste("break", bdbid_n, sep="") 
+      {
+        linebreak <- paste("break", bdbid_n, sep="")
         output[[linebreak]] <- renderUI({HTML("<br/>")})
         uiOutput(linebreak)
       }
@@ -468,8 +469,8 @@ server <- function(input, output, session) {
           }, align = 'c', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
         tableOutput(tablename2)
       }else
-      { 
-        linebreak2  <- paste("break2", bdbid_n, sep="") 
+      {
+        linebreak2  <- paste("break2", bdbid_n, sep="")
         output[[linebreak2]] <- renderUI({HTML("<br/>")})
         uiOutput(linebreak2)
       }
@@ -482,6 +483,3 @@ server <- function(input, output, session) {
 
 
 }
-
-
-
