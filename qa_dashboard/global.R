@@ -1,8 +1,8 @@
 library(plotly)
-library(lubridate)
+
 
 plot_model <- function(x, model, B, cp1, cp2, energy, unit, p1 = plot_ly())
-{
+{ 
   options(digits=15)
   require(ggplot2)
   x = x[order(x)]
@@ -25,25 +25,25 @@ plot_model <- function(x, model, B, cp1, cp2, energy, unit, p1 = plot_ly())
   }
 
   if (model == '5P')
-  {
+  { 
     x = c(x0, cp1, cp2, xf)
     estimated = ifelse(x <= cp1, yInter_1 + slope1*x, ifelse(x >= cp2, yInter_2 + slope2*x,Ycp))
   }else if (model  == '4P')
-  {
+  { 
     x = c(x0, cp1, xf)
     estimated =ifelse(x <= cp1, yInter_1 + slope1*x, yInter_2 + slope2*x)
   }else if (model == '3PH')
-  {
+  { 
     x = c(x0, cp1, xf)
     estimated = ifelse(x <= cp1, yInter_1 + slope1*x, Ycp)
   }else if (model == '3PC')
-  {
+  { 
     x = c(x0, cp1, xf)
     estimated = ifelse(x > cp1, yInter_1 + slope1*x, Ycp)
   }else
-  {
+  { 
     x = c(x0, xf)
-    estimated = Ycp + slope1*x
+    estimated = Ycp + slope1*x 
   }
 
   if (unit){
@@ -64,12 +64,17 @@ plot_model <- function(x, model, B, cp1, cp2, energy, unit, p1 = plot_ly())
 
   #model_fig = geom_line(data = df, aes(x = x, y = y, color = 'Elec Model'), linetype = 2)
   model_fig = add_trace(p = p1, x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n, dash = 'solid'), name = name_n, inherit = FALSE)
-
+    
   return(model_fig)
 }
 
 flag_func <- function(df, bdbid_n, energy)
-{
+{ 
+  if(is.null(df))
+  {
+    return(FALSE)
+  }
+
   if (bdbid_n %in% unique(df$bdbid) & energy %in% df$energy_type[df$bdbid == bdbid_n])
   {
     flag = TRUE
@@ -82,7 +87,7 @@ flag_func <- function(df, bdbid_n, energy)
 
 
 params_list <- function(best_model, bdbid, energy, prepost)
-{
+{ 
   options(digits=15)
   model = best_model$model_type[best_model$bdbid == bdbid & best_model$energy_type == energy & best_model$prepost == prepost]
 
@@ -97,35 +102,11 @@ params_list <- function(best_model, bdbid, energy, prepost)
 }
 
 params_table <- function(best_model, bdbid, energy)
-{
+{ 
   if(flag_func(best_model, bdbid, energy))
   {
     pl = params_list(best_model, bdbid, energy, 1)
     df = data.frame(Model = as.character(pl$model), Ycp = pl$Ycp, cp1 = pl$cp1, cp2 = pl$cp2, slope1 = pl$slope1, Slope2 = pl$slope2)
-    df[,3:4] = as.character(round(df[,3:4], 2))
-    if (df$Model == '3PC')
-    {
-      colnames(df)[5:6] = c('Cooling Sensitivity','Heating Sensitivity')
-    }else
-    {
-      colnames(df)[5:6] = c('Heating Sensitivity','Cooling Sensitivity')
-      if (energy == 'Elec')
-      {
-        colnames(df)[5:6] = c('Cooling Sensitivity','Heating Sensitivity')
-      }
-    }
-
-    if(df$Model == '5P')
-    {
-      colnames(df)[3:4] = c('Heating Change-point', 'Cooling Change-point')
-    }else if(df$Model == '2P')
-    {
-      df = df[,c(1,2,5,6)]
-    }else
-    {
-      df = df[,c(1,2,3,5,6)]
-      colnames(df)[3] = 'Change-point'
-    }
   }else
   {
     df = data.frame(NULL)
@@ -134,7 +115,7 @@ params_table <- function(best_model, bdbid, energy)
 }
 
 params_matrix <- function(params_vec)
-{
+{ 
   options(digits=15)
   if (params_vec$slope2 == 0)
   {
@@ -148,7 +129,7 @@ params_matrix <- function(params_vec)
 
 
 post_output <- function(post_df,  bdbid_n, energy)
-{
+{  
   options(digits=15)
   if (bdbid_n %in% unique(post_df$bdbid) & energy %in% unique(post_df$energy_type[post_df$bdbid == bdbid_n]))
   {
@@ -201,7 +182,7 @@ heat_cold_point <- function(post_df, energy)
 flag_fuel_oil <- function(breakdown_df, bdbid_n)
 {
   if (!is.null(breakdown_df) & bdbid_n %in% breakdown_df$bdbid)
-  {
+  {  
     if('site_fuel_no_2' %in% colnames(breakdown_df))
     {
       flag = ifelse(subset(breakdown_df$site_fuel_no_2, breakdown_df$bdbid == bdbid_n) == 0, 1, 2)
@@ -217,7 +198,7 @@ flag_fuel_oil <- function(breakdown_df, bdbid_n)
 }
 
 post_col <- function(post_df, n, energy)
-{
+{  
   options(digits=15)
   if (length(post_df))
   {
@@ -236,12 +217,12 @@ post_col <- function(post_df, n, energy)
   {
     post_df = data.frame(NULL)
   }
-
+  
   return(post_df)
 }
 
 post_gross <- function(post_output_df, area, energy_n) # area = binfo_output_list()$binfo_df2['Gross Square Feet',]
-{
+{ 
   #mulitply estimated heating, estimated cooling and total consumption from post modeller with square feet from building info. The result is added as column to post_df modified by post_col
   post_output_df$Gross = ""
   post_output_df$Gross.Unit = ""
@@ -269,12 +250,11 @@ post_gross <- function(post_output_df, area, energy_n) # area = binfo_output_lis
 }
 
 stat_table <- function(best_model, bdbid_n, energy_n)
-{
+{ 
   if (flag_func(best_model, bdbid_n, energy_n))
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'n')]
-    df[,6:7] = as.character(round(as.numeric(df[,6:7]), 2))
   }else
   {
     df = data.frame(NULL)
@@ -282,7 +262,6 @@ stat_table <- function(best_model, bdbid_n, energy_n)
 
   return(df)
 }
-
 
 co2_numeric_rank <- function(co2eui_df, bdbid_n)
 { if (!is.null(co2eui_df) & bdbid_n %in% co2eui_df$bdbid)
@@ -303,10 +282,10 @@ co2_numeric_rank <- function(co2eui_df, bdbid_n)
 }
 
 co2_breakdown <- function(breakdown_df, bdbid_n)
-{
+{ 
   name = 'CO2e Emissions Metric Tons'
   if (!is.null(breakdown_df) & bdbid_n %in% breakdown_df$bdbid)
-  {
+  { 
     if('co2_emissions_metric_tons' %in% colnames(breakdown_df))
     {
       breakdown = round(subset(breakdown_df$co2_emissions_metric_tons, breakdown_df$bdbid == bdbid_n),2)
@@ -326,8 +305,14 @@ co2_breakdown <- function(breakdown_df, bdbid_n)
 }
 
 co2_value_get <- function(breakdown_df, bdbid_n)
-{
-  if (!is.null(co2_breakdown) & bdbid_n %in% breakdown_df$bdbid)
+{ 
+
+  if(is.null(breakdown_df))
+  {
+    return(data.frame())
+  }
+
+  if (bdbid_n %in% breakdown_df$bdbid)
   {
      site_eui = round(subset(breakdown_df$site_eui, breakdown_df$bdbid == bdbid_n),2)
      source_eui = round(subset(breakdown_df$source_eui, breakdown_df$bdbid == bdbid_n),2)
@@ -344,11 +329,11 @@ co2_value_get <- function(breakdown_df, bdbid_n)
 }
 
 percent_figure0 <- function(x)
-{
-  x = x/100
-  x1 <- c(0.25, 0.25, 0.25, 0.25)
-  x2 <-c(0.5, 0.5, 0.5, 0.5)
-  x3 <- c(0.25, 0.25, 0.25, 0.25)
+{ 
+  x = x*100
+  x1 <- c(25, 25, 25, 25)
+  x2 <-c(50, 50, 50, 50)
+  x3 <- c(25, 25, 25, 25)
 
   y = c('Baseload','Change-point', 'Heating Sensitivity', 'Cooling Sensitivity')
   q <- plot_ly() %>%
@@ -381,7 +366,7 @@ percent_figure0 <- function(x)
 }
 
 percent_get <- function(post_df, bdbid_n, energy, model)
-{
+{ 
 
   if (energy == 'Elec' & model != '5P')
   {
@@ -390,7 +375,7 @@ percent_get <- function(post_df, bdbid_n, energy, model)
   {
     cp_per = post_df$heating_change_point_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   }
-
+  
   heat_sen_per = post_df$heating_sensitivity_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   cool_sen_per = post_df$cooling_sensitivity_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   base_per = post_df$baseload_percent_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
@@ -406,7 +391,7 @@ percent_get <- function(post_df, bdbid_n, energy, model)
 }
 
 numeric_get <- function(post_df, bdbid_n, energy, model)
-{
+{  
 
   if (energy == 'Elec' & model != '5P')
     {
@@ -415,7 +400,7 @@ numeric_get <- function(post_df, bdbid_n, energy, model)
   {
     cp_per = post_df$heating_change_point_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   }
-
+    
   heat_sen_per = post_df$heating_sensitivity_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   cool_sen_per = post_df$cooling_sensitivity_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
   base_per = post_df$baseload_numeric_rank[post_df$bdbid == bdbid_n & post_df$energy_type == energy]
@@ -430,11 +415,11 @@ numeric_get <- function(post_df, bdbid_n, energy, model)
   }
 
   x = c(base_per, cp_per, heat_sen_per, cool_sen_per)
-  return(numeric_post_table(x))
+  return(numeric_post_table(x)) 
 }
 
 numeric_post_table <- function(x)
-{
+{ 
   df = data.frame(t(x))
   row.names(df) = c('Numeric Ranking')
   if(length(x) == 4)
@@ -450,10 +435,10 @@ numeric_post_table <- function(x)
 per_num_func <- function(df, bdbid_n, energy)
 {
   if (flag_func(df, bdbid_n, energy))
-    {
+    { 
       df = subset(df, df$bdbid == bdbid_n & df$energy_type == energy)
       model = df$model_type
-
+     
       percent_vec = percent_get(df, bdbid_n, energy, model)
       percent_fig = percent_figure(percent_vec)
 
@@ -482,15 +467,14 @@ elec_fuel_graph_func <- function(temp_df, best_model, bdbid_n, b_name = "", heig
       unit = switch(energy, 'Elec' = TRUE, 'Fuel' = FALSE)
 
 
-      p = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name, unit_usage, unit, p)
+      p = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name, unit, p)
     }
     return(p)
 }
 
-plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit_usage, unit = FALSE)
-{
+plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit = FALSE)
+{ 
 
-  print(2002)
   if (unit)
   {
     df$y =  df$y*3412.14
@@ -501,11 +485,11 @@ plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit_usage, 
 
   switch(energy, 'Elec' = {
     color_n = 'rgba(51, 113, 213, 1)'
-    y_title = paste('Usage(kWh',unit_usage, sep ='')
+    y_title = "Usage (kWh)"
     },
     'Fuel' = {
     color_n = 'rgba(240, 24, 28,1)'
-    y_title =  paste('Usage(BTU',unit_usage, sep ='')
+    y_title = "Usage (BTU)"
     }
   )
 
@@ -524,14 +508,13 @@ plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit_usage, 
 
 
 plot_timeseries <- function(util, energy)
-{
+{ 
   #plot timeseries. Unlike pplot_timeseries function, it also plots points and the shape of the points is now adjusted (Act or Est)
   options(digits=15)
-  util = util[order(util[,'end_date']),]
   util$estimated = ifelse(util$estimated == 1, 'Est', 'Act')
 
-  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/day)", "/sqft/day)")
-
+  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
+  
   util_act = subset(util, util$estimated == 'Act')
   util_est = subset(util, util$estimated == 'Est')
 
@@ -576,7 +559,7 @@ co2_rank_get <- function(co2eui_df, bdbid_n)
 }
 
 co2eui_figure <- function(x)
-{
+{ 
   x = x/100
   x1 <- c(0.25, 0.25, 0.25)
   x2 <-c(0.5, 0.5, 0.5)
@@ -625,61 +608,54 @@ fuel_oil_message <- function(flag)
 
 
 main_plot <- function(temp_df, best_model, bdbid_n, energy, b_name = "")
-{
-  print(1)
+{ 
   util_energy_type = subset(temp_df$energy_type, temp_df$bdbid == bdbid_n)
   if (energy %in% util_energy_type)
-  {
+  { 
     #susbset by energy now
     util = subset(temp_df, bdbid == bdbid_n & temp_df$energy_type == energy)
 
     util$estimated[util$estimated == 1] <- 'Est'
     util$estimated[util$estimated != 'Est'] <- 'Act'
 
-    unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
-
     df1 = data.frame(x = util$OAT, y = util$usage, z = util$estimated) #ready for point plot
-    print(2)
+
     if (bdbid_n %in% unique(best_model$bdbid)) #bdbid is in best_model
     {
-      print(3)
       best_energy_type = subset(best_model$energy_type, best_model$bdbid == bdbid_n)
 
       if(energy %in% best_energy_type) #energy and bdbid is in util and best
       {
-        print(4)
-        final_figure = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name, unit_usage)
+        final_figure = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name)
       }else #if FALSE, it means energy is not in best model so just point plot
       {
-        final_figure = plot_point_2(df1, energy, b_name = b_name, unit_usage = unit_usage)
+        final_figure = plot_point_2(df1, energy, b_name = b_name)
       }
     }else #if FALSE, it means bdbid does not make it to best_model so just point plot
     {
-      print(2001)
-      final_figure = plot_point_2(df1, energy, b_name = b_name, unit_usage = unit_usage)
+      final_figure = plot_point_2(df1, energy, b_name = b_name)
     }
   }else #if FALSE, it means energy is not in util frame so empty plot
-  {
+  { 
     final_figure = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy, "for", b_name))
   }
   return(final_figure)
 }
 
-main_line_point_plot <- function(df1, best_model, bdbid_n, energy, b_name, unit_usage, unit = FALSE, p_init = plot_ly())
+main_line_point_plot <- function(df1, best_model, bdbid_n, energy, b_name, unit = FALSE, p_init = plot_ly())
 {
-  print(5)
   params = params_list(best_model, bdbid_n, energy, 1)
   B = params_matrix(params)
   x1 = df1$x
 
   model_fig = plot_model(x1, params$model, B, params$cp1, params$cp2, energy, unit, p_init)
-  final_figure = plot_point_2(df1, energy, model_fig, b_name, unit_usage, unit)
+  final_figure = plot_point_2(df1, energy, model_fig, b_name, unit)
 
   return(final_figure)
 }
 
 stat_param_table <- function(best_model, bdbid_n, energy_n)
-{
+{ 
   if (flag_func(best_model, bdbid_n, energy_n))
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
@@ -693,7 +669,7 @@ stat_param_table <- function(best_model, bdbid_n, energy_n)
 }
 
 get_building_name <- function(binfo_df, bdbid_n)
-{
+{ 
   if (is.null(binfo_df))
   {
     plot_title = as.character(bdbid_n)
@@ -706,15 +682,13 @@ get_building_name <- function(binfo_df, bdbid_n)
 }
 
 binfo_table <- function(binfo_df, bdbid_n)
-{
+{ 
   binfo_df = subset(binfo_df, bdbid == bdbid_n)
   location = paste(paste(binfo_df$city, binfo_df$state, sep = ', '), binfo_df$zip, sep =' ')
   b_id = paste("BDBID", binfo_df$bdbid, sep = ': ')
   binfo_df1 = t(data.frame(bdbid = b_id, name = binfo_df$building_name, address = binfo_df$address, location = location))
   binfo_df2 = t(data.frame(agency = binfo_df$oper_agency_acronym, primary = binfo_df$epapm_primary_function, area = binfo_df$total_bldg_gross_sq_ft))
   rownames(binfo_df2) = c('Agency', 'Primary Function', 'Gross Square Feet')
-  #binfo_df2[3,] = round(as.numeric(binfo_df2[3,]), 2)
-  #binfo_df2[3,] = prettyNum(binfo_df2[3,], big.mark = ",", format = 'f')
   return(list(binfo_df1 = binfo_df1, binfo_df2 = binfo_df2))
 }
 
@@ -728,7 +702,7 @@ help_table <- function()
 }
 
 missing_cols_handler <- function(cols, df)
-{
+{ 
   org_col = colnames(df)
   col_null = cols[!(cols %in% org_col)]
   df[,col_null] = NA
@@ -737,14 +711,14 @@ missing_cols_handler <- function(cols, df)
 
 
 sqft_message <- function(sqft_col)
-{
+{ 
   sqft_vec = unique(sqft_col)
   if (length(sqft_vec) == 1)
   {
     message = switch(as.character(sqft_vec),
       "1" = "Energy usage is normalized by sqft.",
       "0" = "Energy usage is not normalized by sqft.",
-      "No information avaliable for this facility regarding energy usage being normalized by sqft. Default to assume it is normalized."
+      "No information avaliable for this facility regarding energy usage being normalized by sqft."
       )
   }else
   {
@@ -774,9 +748,9 @@ check_sqft_na <- function(df)
 
 percent_figure <- function(x, co2_flag = FALSE)
 {
-  x = x/100
-  m1 = matrix(data = seq(0,1,length.out = 1000), nrow = 1, ncol = 1000)
-  x1 = seq(0,1,length.out = 1000)
+  x = x*100
+  m1 = matrix(data = seq(0,100,length.out = 10000), nrow = 1, ncol = 10000)
+  x1 = seq(0,100,length.out = 10000)
 
   len_key = length(x)
   height_n = 300
@@ -788,16 +762,16 @@ percent_figure <- function(x, co2_flag = FALSE)
     margin_l = 160
     width_n = 750
   }else
-  {
+  { 
     bar_size = 26
     width_n = 700
     if (co2_flag)
-    {
-      x = x*100
+    { 
+      #x = x*100
       y = c('Site EUI Rank', 'Site CO2e kg/sqft', 'Source EUI Rank', 'Source CO2e kg/sqft')
       margin_l = 150
     }else
-    {
+    { 
       margin_l = 135
       y = c('Baseload','Change-point', 'Heating Sensitivity', 'Cooling Sensitivity')
     }
@@ -806,7 +780,7 @@ percent_figure <- function(x, co2_flag = FALSE)
   color_vec = c('#29CD3F', 'yellow', 'yellow', '#F73434')
 
   p1 = add_trace(p = plot_ly(width = width_n, height = height_n), x = x1, y= y[1], z = m1, colors = colorRamp(color_vec), type = "heatmap", showscale = FALSE) %>% layout(yaxis = list(tickcolor = 'white', showline = FALSE, zeroline = FALSE, showgrid = FALSE), margin = list(l = margin_l))
-  p1 = add_trace(p = p1, x = ~x[1], y= ~y[1], type = 'scatter', mode = 'markers', marker = list(symbol = "line-ns-open", color = 'black', size = bar_size, line = list(width = 3)), showlegend = FALSE, name = y[1])
+  p1 = add_trace(p = p1, x = ~x[1], y= ~y[1], type = 'scatter', mode = 'markers', marker = list(symbol = "line-ns-open", color = 'black', size = bar_size, line = list(width = 3)), showlegend = FALSE, name = y[1]) 
 
   p2 = add_trace(p = plot_ly(width = width_n, height = height_n), x = x1, y= y[2], z = m1, colors = colorRamp(color_vec), type = "heatmap", showscale = FALSE) %>% layout(yaxis = list(tickcolor = 'white', showline = FALSE, zeroline = FALSE, showgrid = FALSE), margin = list(l = margin_l))
   p2 = add_trace(p = p2, x = ~x[2], y= ~y[2], type = 'scatter', mode = 'markers', marker = list(symbol = "line-ns-open", color = 'black', size = bar_size, line = list(width = 3)), showlegend = FALSE, name = y[2])
@@ -819,21 +793,21 @@ percent_figure <- function(x, co2_flag = FALSE)
 
   if(len_key == 4)
   {
-      p = subplot(p1,p2,p3,p4, nrows = 4, heights = c(0.2,0.22,0.22,0.2), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(0.125,0.5,0.875), ticktext = c('Good','Average','Poor')))
+      p = subplot(p1,p2,p3,p4, nrows = 4, heights = c(0.2,0.22,0.22,0.2), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(12.5,50,87.5), ticktext = c('Good','Average','Poor')))
       return(p)
   }else
   {
       p5 = add_trace(p = plot_ly(width = width_n, height = height_n), x = x1, y= y[5], z = m1, colors = colorRamp(color_vec), type = "heatmap", showscale = FALSE) %>% layout(yaxis = list(tickcolor = 'white', showline = FALSE, zeroline = FALSE, showgrid = FALSE), margin = list(l = margin_l))
       p5 = add_trace(p = p5, x = ~x[5], y= ~y[5], type = 'scatter', mode = 'markers', marker = list(symbol = "line-ns-open", color = 'black', size = bar_size, line = list(width = 3)), showlegend = FALSE, name = y[5])
 
-      p = subplot(p1,p2,p3,p4,p5, nrows = 5, heights = c(0.15,0.17,0.17,0.17,0.15), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(0.125,0.5,0.875), ticktext = c('Good','Average','Poor')))
+      p = subplot(p1,p2,p3,p4,p5, nrows = 5, heights = c(0.15,0.17,0.17,0.17,0.15), shareX = TRUE, shareY = FALSE) %>% layout(xaxis = list(title ="", tickmode = 'array', tickvals = c(12.5,50,87.5), ticktext = c('Good','Average','Poor')))
       return(p)
   }
 
 }
 
 energy_break_pie_chart <- function(df)
-{
+{  
 
   df$color = NA
 
@@ -850,13 +824,13 @@ energy_break_pie_chart <- function(df)
   site_p <- add_pie(p = plot_ly(), data = df, labels = ~epa_energy_type, values = ~site_energy_kbtu, type = 'pie', textposition = 'outside', textinfo = 'percent', hoverinfo = 'text',
         marker = list(colors = df$color, line = list(color = '#FFFFFF', width = 1)), hole = 0.6,
         insidetextfont = list(color = '#FFFFFF')) %>%
-    layout(title = 'Site Energy Breakdown', showlegend = TRUE,
+    layout(title = '', showlegend = TRUE,
            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
   source_p <- add_pie(p = plot_ly(), data = df, labels = ~epa_energy_type, values = ~source_energy_kbtu, type = 'pie', textposition = 'outside', textinfo = 'percent', hoverinfo = 'text',
         marker = list(colors = df$color, line = list(color = '#FFFFFF', width = 1)), hole = 0.6,
         insidetextfont = list(color = '#FFFFFF')) %>%
-    layout(title = 'Source Energy Breakdown', showlegend = TRUE,
+    layout(title = '', showlegend = TRUE,
            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
   return(list(site_p = site_p, source_p = source_p))
@@ -866,18 +840,11 @@ make_break_table <- function(df)
 {
   df = df[, c('epa_energy_type','reported_consumption_unit', 'reported_site_energy', 'reported_source_energy')]
   colnames(df) = c('EPA Energy Type', 'Unit','Reported Site Energy', 'Reported Source Energy')
-
-  df$'Reported Site Energy' = round(as.numeric(df$'Reported Site Energy'), 2)
-  df$'Reported Site Energy' = prettyNum(df$'Reported Site Energy', big.mark = ",", format = 'f')
-
-  df$'Reported Source Energy' = round(as.numeric(df$'Reported Source Energy'), 2)
-  df$'Reported Source Energy' = prettyNum(df$'Reported Source Energy', big.mark = ",", format = 'f')
-
   return(df)
 }
 
 post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
-{
+{   
     post_output_df = post_output(post_df, bdbid_n, energy_n)
     post_output_df = post_col(post_output_df, n, energy_n)
 
@@ -894,19 +861,118 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
     return(post_output_df)
 }
 
-fixed_time <- function(util)
-{
-  if(!is.POSIXlt(util$end_date) & !is.POSIXt(util$end_date) & !is.POSIXct(util$end_date))
+
+building_comparison_graph <- function(df, binfo, primary_fun)
+{ 
+  if (is.null(df)){
+    return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data')))
+  }
+  aes_df = subset(binfo, binfo$bdbid %in% df$bdbid)
+  aes_df = aes_df[order(aes_df$bdbid),]
+  df = df[order(df$bdbid),]
+  p_init = plot_ly(source = 'B')
+
+  if(primary_fun == 'None'){
+    pal = colorRamps::matlab.like(length(unique(aes_df$primary_fun)))
+    pal = setNames(pal, unique(aes_df$primary_fun))
+    p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$site_eui, type ='scatter',
+              mode ='markers', text = aes_df$name, hoverinfo = 'x+y+text', color = aes_df$primary_fun, colors = pal,
+              marker = list(symbol = 'circle', size = 9, opacity = 0.6,
+                        line = list(color = 'rgba(164,165,164,1)', width = 1)), inherit = FALSE)
+  }else
   {
-    if (grepl('/', util$end_date[1]))
-    {
-      util$end_date = strptime(util$end_date, format = "%m/%d/%Y")
-    }else
-    {
-      util$end_date = strptime(util$end_date, format = "%Y-%m-%d")
-    }
+    p = add_trace(p = p_init, x = df$total_bldg_gross_sq_ft, y = df$site_eui, type ='scatter', mode ='markers', text = aes_df$name, hoverinfo = 'x+y+text',
+    marker = list(symbol = 'circle', color = 'rgba(176,220,175,1)', size = 9, line = list(color = 'rgba(164,165,164,1)', width = 1)), name = 'blah', inherit = FALSE)
+  }
+  p = p %>% layout(title = 'Buliding Comparison', xaxis = list(title = "Property Size (sqft)",
+                      showticklabels = TRUE, zeroline = FALSE, showline = FALSE),
+                  yaxis = list(title = "EUI (kBTU/sqft)", showticklabels = TRUE, showline = FALSE,
+                      zeroline = FALSE))
+  return(p)
+}
+
+lean_table_handler <- function(lean_df, energy, b_df){
+  if(is.null(b_df$bdbid) | is.null(lean_df))
+  {
+    return(NULL)
   }
 
-  util$end_date = as.POSIXct(util$end_date)
-  return(util)
+  #df = subset(lean_df, lean_df$energy_type == energy & lean_df$bdbid %in% b_df$bdbid)
+  df = subset(lean_df, lean_df$energy_type == energy)
+  total_num = nrow(df)
+  df = subset(df, df$bdbid %in% b_df$bdbid)
+  df = df[,c('bdbid', "cooling_change_point_numeric_rank", "cooling_sensitivity_numeric_rank", "heating_change_point_numeric_rank", "heating_sensitivity_numeric_rank", "baseload_numeric_rank")]
+  colnames(df) = c('bdbid', 'Cooling Change Point Numeric Rank', 'Cooling Sens Numeric Rank', 'Heating Change Point Numeric Rank', 'Heating Sens Numeric Rank', 'Baseload Numeric Rank')
+  df = df[order(df$bdbid),]
+  df$bdbid = subset(b_df$name, b_df$bdbid %in% df$bdbid)
+  return(list(df = df, total_num = total_num))
+}
+
+point_lookup <- function(breakdown_df, x){
+  bdbid = subset(breakdown_df$bdbid, breakdown_df$total_bldg_gross_sq_ft == x)
+  return(bdbid)
+}
+
+make_model_info_table <- function(best_model, b_df){
+  if (is.null(best_model) | is.null(b_df)){
+    return(NULL)
+  }
+  df = data.frame(bdbid = b_df$bdbid, name = b_df$name, elec_model = NA, fuel_model = NA)
+  df = df[order(df$bdbid),]
+  for (bdbid_n in df$bdbid){
+    best_df = subset(best_model, best_model$bdbid == bdbid_n)
+    model_vec = get_model_information(best_df)
+    df$elec_model[df$bdbid == bdbid_n] = model_vec[1]
+    df$fuel_model[df$bdbid == bdbid_n] = model_vec[2]
+  }
+  df = df[,c('name', 'elec_model', 'fuel_model')]
+  colnames(df) = c('bdbid', 'Elec Model', 'Fuel Model')
+
+  return(df)
+}
+
+get_model_information <- function(best_df){
+  if(nrow(best_df) == 0){
+    return(c(NA,NA))
+  }
+
+  final_vec = c()
+  for (energy in c('Elec','Fuel')){
+    model = best_df$model[best_df$energy_type == energy]
+    if (length(model))
+    {
+      final_vec = c(final_vec, model)
+    }else
+    {
+      final_vec = c(final_vec, NA)
+    }
+  }
+  return(final_vec)
+}
+
+
+
+chunky_paginator <- function(url = '', bdbid_vec = c(), query_params = list(), chunky_vec = NULL){
+  if(is.null(chunky_vec)){
+    query_params$bdbid = paste0(bdbid_vec, collapse = ',')
+    final_df = paginator_fetch_request(url, query_params=query_params)$result
+    return(final_df)
+  }
+
+  iter_len = length(chunky_vec) - 1
+  final_df = data.frame()
+  for (i in c(1:iter_len)){
+    start_i = chunky_vec[i]
+    end_i = ifelse(i == iter_len, chunky_vec[i+1], chunky_vec[i+1]-1)
+    bdbid_str = paste0(bdbid_vec[start_i:end_i], collapse = ',')
+    query_params$bdbid = bdbid_str
+    df = paginator_fetch_request(url, query_params=query_params)$result
+    final_df = rbind(final_df, df)
+  }
+  return(final_df)
+}
+
+get_task_id <- function(endpoint_url, query_params){
+  task = post_request(endpoint_url, payload = query_params)
+  return(task$task_id)
 }

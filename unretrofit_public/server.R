@@ -7,10 +7,9 @@ server <- function(input, output, session) {
 
     if (is.null(inFile))
       return(NULL)
-
+    df = read.csv(inFile$datapath)
     colnames(df)[colnames(df) == 'period'] = 'n'
     best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
-    df = read.csv(inFile$datapath)
     df = missing_cols_handler(best_cols, df)
     })
 
