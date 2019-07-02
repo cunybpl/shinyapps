@@ -32,7 +32,8 @@ shinyServer(function(input, output, session) {
             ),
             uiOutput('tar_date_wiggy'),
             uiOutput('retro_start_wiggy'),
-            uiOutput('retro_end_wiggy')
+            uiOutput('retro_end_wiggy'),
+            uiOutput('energy_wiggy')
           )),
           column(width = 8,
           mainPanel(width = 12,
@@ -40,20 +41,33 @@ shinyServer(function(input, output, session) {
               tabPanel("App Info",
                 h5('To get started, Utility CSV must be uploaded.')
               ),
-        tabPanel("Graphs & Tables for Elec",
+        tabPanel("Graphs & Tables for Baseline",
             h3("Building Information"),
             br(),
             fluidRow(
-                column(6, tableOutput('elec_binfo_df1')),
-                column(width = 6, tableOutput('elec_binfo_df2'))
-            )
-        ),
-        tabPanel("Graphs & Tables for Fuel",
-            h3("Building Information")
-        ),
-        tabPanel('Elec Vs Fuel',
+                column(6, tableOutput('base_binfo_df1')),
+                column(width = 6, tableOutput('base_binfo_df2'))
+            ),
+            h3("Time Series", align = "center"),
+            plotlyOutput('base_timeseries'),
+            h3("Parameter Model Graph", align = "center"),
+            plotlyOutput('base_param_plot'),
             br(),
-            h3("Elec Vs. Fuel", align = "center")
+            tableOutput('base_params_df'),
+            br(),
+            tableOutput('base_stat_df'),
+            br(),
+            tableOutput('base_post_df')
+        ),
+        tabPanel("Graphs & Tables for Retrofit",
+            h3("Building Information"),
+            br(),
+            fluidRow(
+                column(6, tableOutput('retro_binfo_df1')),
+                column(width = 6, tableOutput('retro_binfo_df2'))
+            ),
+            h3("Time Series", align = "center"),
+            plotlyOutput('retro_timeseries')
         )
             )#main tab panel
           )))#main panle
@@ -62,11 +76,6 @@ shinyServer(function(input, output, session) {
     }
   })
 
-#### YOUR APP'S SERVER CODE GOES HERE ----------------------------------------
-  # slider input widget
-
-  # password entry UI componenets:
-  #   username and password text fields, login button
 
   ##########################################
   ########## LOGIN PAGE STARTS HERE ########
@@ -154,48 +163,44 @@ shinyServer(function(input, output, session) {
     )
     })
 
+  output$energy_wiggy <- renderUI({
+    tagList(
+      selectInput('energy_type', 'Energy Type', choices = c('Elec', 'Fuel'), selected = 'Elec', multiple = FALSE,
+  selectize = TRUE, width = NULL, size = NULL)
+
+    )
+  })
+
   ##########################################
   ############# Prepare Queries ############
   ##########################################
 
-  baseline_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=input$sqft_fl,
+  baseline_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
                           fiscal_year=input$fiscal_year, target_date = input$tar_date,
                           relax = TRUE, invert_order_elec = TRUE, invert_order_fuel = TRUE)})
 
-  retro_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=input$sqft_fl,
+  retro_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
                           fiscal_year=input$fiscal_year, retrofit_start_date = input$start_date, retrofit_end_date = input$end_date)})
 
   ##########################################
   ####### GATHER AROUND, DATA IS HERE ######
   ##########################################
 
-  task_id_base <- reactive({
-    get_task_id('/bema/modeler/baseline/basic/', query_params = baseline_query())
-    })
-
-  url_get <- reactive({
-    base_url <- cache_get_base_url()
-    token <- cache_get_token()
-    url <- paste0(base_url, 'bema/results/', task_id_base())
-    return(url)
-  })
-
   baseline_batch <- reactive({
-    print(task_id_base())
-    token <- cache_get_token()
-    res <- httr::GET(url_get(), httr::add_headers(Authorization=token),encode='json', timeout=20, config = httr::config(ssl_verifypeer = FALSE))
-    print(res)
-    res = .parse_contents(res)
-    print(res$status)
-    res$results
+    if(input$tar_date == ""){
+      return(list())
+    }
+    df = get_batch_result('/bema/modeler/baseline/basic/', baseline_query())
+    return(df$results)
   })
 
   retro_batch <- reactive({
-    if(is.null(input$start_date) | is.null(input$end_date)){
+    if(input$start_date == "" | input$end_date == ""){
       return(list())
     }
-    return(list())
-    })
+    df = get_batch_result('/bema/modeler/retrofit/basic/', retro_query())
+    return(df$results)
+  })
 
   ##########################################
   ######## VISULIZATION STARTS HERE ########
@@ -203,20 +208,70 @@ shinyServer(function(input, output, session) {
 
 
   binfo_df <- reactive({
-    print('your mom')
-    df = baseline_batch()$building
-    print(df)
-    return(df)
+    if(length(baseline_batch())){
+      return(baseline_batch()$building)
+    }else if(length(retro_batch())){
+      return(retro_batch()$building)
+    }else{
+      return(NULL)
+    }
   })
+
+  ################# Unretrofit ################
 
   utility_base <- reactive({
     baseline_batch()$utility
   })
 
+  best_base <- reactive({
+    df = baseline_batch()$best
+    if(length(df)){
+      best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
+      df = missing_cols_handler(best_cols, df)
+    }
+    return(df)
+  })
+
+  post_base <- reactive({
+    df = baseline_batch()$post
+    if(length(df))
+    {
+      post_cols = c("sitename", 'period', 'percent_cooling', 'percent_heating', 'percent_baseload', "session_id")
+      df = missing_cols_handler(post_cols, df)
+    }
+    return(df)
+  })
+
+  ################## Retrofit #################
+
+  utility_retro <- reactive({
+    retro_batch()$utility
+  })
+
+  best_retro <- reactive({
+    retro_batch()$best
+  })
+
+  post_retro <- reactive({
+    retro_batch()$post
+  })
+
+  ################## energy #################
+
+  util_energy <- reactive({
+    if (flag_func(utility_retro(), input$bdbid, input$energy_type)){
+      return(subset(utility_retro(), bdbid == input$bdbid & energy_type == input$energy_type))
+    }
+    NULL
+  })
+
+  energy_null_flag <- reactive({is.null(util_energy())})
 
   #############################################
   ################# Calculator ################
   #############################################
+
+  b_name <- reactive({get_building_name(binfo_df(), input$bdbid)})
 
   binfo_output_list <- reactive({
     if (is.null(binfo_df()))
@@ -224,40 +279,92 @@ shinyServer(function(input, output, session) {
       list(binfo_df1 = data.frame(), binfo_df1 = data.frame())
     }else
     {
-      binfo_table(binfo_df(), bdbid_n())
+      binfo_table(binfo_df(), input$bdbid)
     }
   })
 
-  ################# Energy Dependent ###############
-
-  ########## Building comparison, lean ##############
-
-
-  ################# Energy Independent ###############
-
-
+  area_info <- reactive({
+    flag_area = check_sqft_na(binfo_output_list()$binfo_df2)
+    if (flag_area)
+    {
+        return(list(flag_area = flag_area, area = binfo_output_list()$binfo_df2['Gross Square Feet',]))
+    }else
+    {
+        return(list(flag_area = flag_area))
+    }
+  })
 
   #############################################
-  ################# ELEC OUTPUT ###############
+  ############## BASELINE OUTPUT ##############
   #############################################
 
-  output$elec_binfo_df1 <- renderTable({
+  output$base_binfo_df1 <- renderTable({
     binfo_output_list()$binfo_df1
   }, align = 'l', colnames = FALSE, width = "auto")
 
-  output$elec_binfo_df2 <- renderTable({
+  output$base_binfo_df2 <- renderTable({
     binfo_output_list()$binfo_df2
   }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
 
+  output$base_timeseries <- renderPlotly({
+
+    if (flag_func(utility_base(), input$bdbid, input$energy_type))
+    {
+      util = subset(utility_base(), bdbid == input$bdbid & energy_type == input$energy_type)
+      plot_timeseries(util, input$energy_type)
+    }else
+    {
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type))
+    }
+  })
+
+  output$base_param_plot <- renderPlotly({main_plot(utility_base(), best_base(), input$bdbid, input$energy_type, b_name())})
+
+  output$base_param_df <- renderTable({
+      params_table(best_base(), input$bdbid, input$energy_type)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$base_stat_df <- renderTable({
+      stat_table(best_base(), input$bdbid, input$energy_type)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$base_post_df <- renderTable({
+    if (!flag_func(post_base(), input$bdbid, input$energy_type))
+    {
+      return(NULL)
+    }
+    post_output_df_server(post_base(), input$bdbid, input$energy_type, area_info(), input$period)
+  }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
 
   #############################################
-  ################# FUEL OUTPUT ###############
+  ################ RETRO OUTPUT ###############
   #############################################
 
+  output$retro_binfo_df1 <- renderTable({
+    binfo_output_list()$binfo_df1
+  }, align = 'l', colnames = FALSE, width = "auto")
 
+  output$retro_binfo_df2 <- renderTable({
+    binfo_output_list()$binfo_df2
+  }, align = 'l', colnames = FALSE, rownames = TRUE, width = "auto")
 
-  ############### Elec Vs Fuel ################
+  output$retro_timeseries <- renderPlotly({
+    if (energy_null_flag())
+    {
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec')
+    }else
+    {
+      plot_timeseries(util_energy(), 'Elec')
+    }
+  })
 
+  output$retro_param_plot <- renderPlotly({
+    if (energy_null_flag())
+    {
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec'))
+    }
+    main_plot_model(util_energy(), best_retro(), input$bdbid, input$energy_type, b_name())
+    })
 
   ##########################################
   ############### Buildings ################

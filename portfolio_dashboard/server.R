@@ -160,7 +160,7 @@ shinyServer(function(input, output, session) {
       )#fluid page
     }
   })
-  
+
 #### YOUR APP'S SERVER CODE GOES HERE ----------------------------------------
   # slider input widget
 
@@ -174,7 +174,7 @@ shinyServer(function(input, output, session) {
   output$uiLogin <- renderUI({
     wellPanel(
       textInput("user_name", "User Name:"),
-      
+
       passwordInput("password", "Password:"),
 
       actionButton("login_button", "Log in")
@@ -197,7 +197,7 @@ shinyServer(function(input, output, session) {
       {
         user_input$authenticated <- TRUE
       }
-    })  
+    })
 
     # red error message if bad credentials
   output$pass <- renderUI({
@@ -233,7 +233,7 @@ shinyServer(function(input, output, session) {
     })
 
   binfo_org_df <- reactive({
-    load("building_info.RData", df <- new.env()) 
+    load("building_info.RData", df <- new.env())
     df$binfo_df
     })
 
@@ -270,7 +270,7 @@ shinyServer(function(input, output, session) {
   #all the buildings from building info, given agency and functions and blah blah
   binfo_df <- reactive({
     #bin_df = paginator_fetch_request('dcasdb/buildings/', query_params=list(page_size = 1000))$result
-    if (primary_fun()$fun_flag){ 
+    if (primary_fun()$fun_flag){
       df = subset(binfo_org_df(), binfo_org_df()$epapm_primary_function == lean_cat())
     }else{ #input$cat is agency
       if(input$fun_input != 'None'){
@@ -309,7 +309,7 @@ shinyServer(function(input, output, session) {
     {
       return(NULL)
     }else
-    { 
+    {
       df = subset(b_df0(), b_df0()$bdbid %in% breakdown_df()$bdbid)
       df = df[order(df$bdbid),]
       return(df)
@@ -339,7 +339,7 @@ shinyServer(function(input, output, session) {
         }
         #click_n() = click_n() + 1
   })
-    
+
   observeEvent(input$nextBin, {
         current <- which(b_df()$bdbid  == bdbid_n())
         if(current < length(b_df()$name)){
@@ -362,7 +362,7 @@ shinyServer(function(input, output, session) {
     }
     df = fetch_request('portfolios/utility/', query_params=list(bdbid = bdbid_n(), fiscal_year = fiscal_n))$result
     if (length(df))
-    { 
+    {
       colnames(df)[colnames(df) == 'oat' | colnames(df) == 'OAT'] = 'OAT'
       util_cols = c("using_sqft", "using_fuel_oil")
       df = missing_cols_handler(util_cols, df)
@@ -377,7 +377,7 @@ shinyServer(function(input, output, session) {
     query_params=list(fiscal_year = input$fiscal_year, best = 1, page_size = 1000)
     df = chunky_paginator(url = 'portfolios/changepoint-model/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
     #df = paginator_fetch_request('portfolios/changepoint-model/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, best = 1, page_size = 1000))$result
-    
+
     if (length(df))
     {
       if(!('prepost' %in% colnames(df))){df$prepost = 1}
@@ -385,24 +385,24 @@ shinyServer(function(input, output, session) {
       df = missing_cols_handler(best_cols, df)
       return(df)
     }else
-    { 
+    {
       return(NULL)
     }
   })
 
   binfo_output_list <- reactive({
     if (is.null(binfo_df()) | null_drop())
-    { 
+    {
       list(binfo_df1 = data.frame(), binfo_df1 = data.frame())
     }else
-    { 
+    {
       binfo_table(binfo_df(), bdbid_n())
     }
   })
 
   post_df <- reactive({
     if(is.null(best_model()))
-    { 
+    {
       return(NULL)
     }
 
@@ -450,7 +450,7 @@ shinyServer(function(input, output, session) {
     df = chunky_paginator(url = 'portfolios/energy-breakdown/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
     #df = paginator_fetch_request('portfolios/energy-breakdown/', query_params=list(bdbid = bdbid_vec(), fiscal_year = input$fiscal_year, page_size = 1000))$result
     if(length(df) == 0)
-    { 
+    {
       return(NULL)
     }
     return(df)
@@ -487,7 +487,7 @@ shinyServer(function(input, output, session) {
     }
     nrow(lean_df_fuel()$df)
     })
-  
+
   num_lean_elec <- reactive({
     if(is.null(lean_df_elec()$df))
     {
@@ -541,7 +541,7 @@ shinyServer(function(input, output, session) {
       co2_rank = co2_rank_get(co2eui_df(), bdbid_n())
       return(percent_figure(co2_rank, co2_flag = TRUE))
     }else
-    { 
+    {
       return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points'))
     }
   })
@@ -567,7 +567,7 @@ shinyServer(function(input, output, session) {
   output$elec_timeseries <- renderPlotly({
 
     if (flag_func(temp_df(), bdbid_n(), 'Elec'))
-    { 
+    {
       util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Elec')
       plot_timeseries(util, 'Elec')
     }else
@@ -582,7 +582,7 @@ shinyServer(function(input, output, session) {
 
   output$elec_sqft <- renderText({
     if (flag_func(temp_df(), bdbid_n(), 'Elec'))
-      { 
+      {
         sqft_col = subset(temp_df()$using_sqft, temp_df()$bdbid == bdbid_n() & temp_df()$energy_type == 'Elec')
         sqft_message(sqft_col)
       }else
@@ -654,7 +654,7 @@ shinyServer(function(input, output, session) {
   output$fuel_timeseries <- renderPlotly({
 
     if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
-    { 
+    {
       util = subset(temp_df(), bdbid == bdbid_n() & energy_type == 'Fuel')
       plot_timeseries(util, 'Fuel')
     }else
@@ -669,7 +669,7 @@ shinyServer(function(input, output, session) {
 
   output$fuel_sqft <- renderText({
     if (flag_func(temp_df(), bdbid_n(), 'Fuel'))
-      { 
+      {
         sqft_col = subset(temp_df()$using_sqft, temp_df()$bdbid == bdbid_n() & temp_df()$energy_type == 'Fuel')
         sqft_message(sqft_col)
       }else

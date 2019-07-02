@@ -254,7 +254,7 @@ stat_table <- function(best_model, bdbid_n, energy_n)
   if (flag_func(best_model, bdbid_n, energy_n))
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
-    df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'n')]
+    df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'period')]
   }else
   {
     df = data.frame(NULL)
@@ -507,13 +507,13 @@ plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit = FALSE
 }
 
 
-plot_timeseries <- function(util, energy)
+plot_timeseries <- function(util, energy, sqft_flag)
 {
   #plot timeseries. Unlike pplot_timeseries function, it also plots points and the shape of the points is now adjusted (Act or Est)
   options(digits=15)
   util$estimated = ifelse(util$estimated == 1, 'Est', 'Act')
 
-  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "0" = "/month)", "/sqft/month)")
+  unit_usage = switch(as.character(.subset2(util, 'using_sqft')[1]), "1" = "/month)", "/sqft/month)")
 
   util_act = subset(util, util$estimated == 'Act')
   util_est = subset(util, util$estimated == 'Est')
@@ -659,7 +659,7 @@ stat_param_table <- function(best_model, bdbid_n, energy_n)
   if (flag_func(best_model, bdbid_n, energy_n))
   {
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
-    df = df[ ,c('prepost', 'model_type', 'xcp1', 'xcp2', 'ls', 'rs', 'r2', 'cv_rmse', 'n')]
+    df = df[ ,c('prepost', 'model_type', 'xcp1', 'xcp2', 'ls', 'rs', 'r2', 'cv_rmse', 'period')]
   }else
   {
     df = data.frame(NULL)
@@ -972,11 +972,16 @@ chunky_paginator <- function(url = '', bdbid_vec = c(), query_params = list(), c
   return(final_df)
 }
 
-get_task_id <- function(endpoint_url, query_params){
-  task = post_request(endpoint_url, payload = query_params)
-  return(task$task_id)
-}
-
-plz_kill_me <- function(task_id){
-  return(fetch_request(paste('/bema/results/', task_id, sep ='')))
+get_batch_result <- function(url, query){
+  delay_n = 0.1
+  task_id = post_request(url, payload = query)$task_id
+  for (i in c(1:20)){
+    res = fetch_request(paste('/bema/results/', task_id, sep =''))
+    if (res$status == 'SUCCESS'){
+      break
+    }
+    delay_n = delay_n +(i/200)
+    Sys.sleep(delay_n)
+  }
+  return(res)
 }
