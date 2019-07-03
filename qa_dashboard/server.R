@@ -53,7 +53,7 @@ shinyServer(function(input, output, session) {
             h3("Parameter Model Graph", align = "center"),
             plotlyOutput('base_param_plot'),
             br(),
-            tableOutput('base_params_df'),
+            tableOutput('base_param_df'),
             br(),
             tableOutput('base_stat_df'),
             br(),
@@ -67,7 +67,15 @@ shinyServer(function(input, output, session) {
                 column(width = 6, tableOutput('retro_binfo_df2'))
             ),
             h3("Time Series", align = "center"),
-            plotlyOutput('retro_timeseries')
+            plotlyOutput('retro_timeseries'),
+            h3("Parameter Model Graph", align = "center"),
+            plotlyOutput('retro_param_plot'),
+            br(),
+            tableOutput('retro_param_df'),
+            br(),
+            tableOutput('retro_stat_df'),
+            br(),
+            tableOutput('retro_post_df')
         )
             )#main tab panel
           )))#main panle
@@ -253,7 +261,11 @@ shinyServer(function(input, output, session) {
   })
 
   post_retro <- reactive({
-    retro_batch()$post
+    df = retro_batch()$post
+    if(nrow(df)){
+      df = percent_heat_cool_func(df)
+    }
+    df
   })
 
   ################## energy #################
@@ -318,10 +330,19 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  output$base_param_plot <- renderPlotly({main_plot(utility_base(), best_base(), input$bdbid, input$energy_type, b_name())})
+  output$base_param_plot <- renderPlotly({
+    utility = subset(utility_base(), utility_base()$bdbid == input$bdbid & utility_base()$energy_type == input$energy_type)
+    if(length(utility)){
+      best_model = subset(best_base(), best_base()$bdbid == input$bdbid & best_base()$energy_type == input$energy_type)
+      main_param_plot(utility, best_model, b_name())
+    }else
+    {
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type))
+    }
+  })
 
   output$base_param_df <- renderTable({
-      params_table(best_base(), input$bdbid, input$energy_type)
+      params_table(best_base(), input$bdbid, input$energy_type, 1)
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$base_stat_df <- renderTable({
@@ -362,19 +383,25 @@ shinyServer(function(input, output, session) {
     if (energy_null_flag())
     {
       return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec'))
+    }else{
+      best_model = subset(best_retro(), best_retro()$bdbid == input$bdbid & best_retro()$energy_type == input$energy_type)
+      main_param_plot(util_energy(), best_model, b_name())
     }
-    main_plot_model(util_energy(), best_retro(), input$bdbid, input$energy_type, b_name())
     })
 
-  ##########################################
-  ############### Buildings ################
-  ##########################################
+  output$retro_param_df <- renderTable({
+    pre_df = params_table(best_retro(), input$bdbid, input$energy_type, 1)
+    post_df = params_table(best_retro(), input$bdbid, input$energy_type, 3)
+    return(rbind(pre_df, post_df))
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
+  output$retro_stat_df <- renderTable({
+      stat_table(best_retro(), input$bdbid, input$energy_type)
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
-
-  ##########################################
-  ############### Models ###################
-  ##########################################
-
+  output$retro_post_df <- renderTable({
+    post_output_df = post_output_retrofit(post_retro(), input$bdbid, input$energy_type)
+    post_output_df = post_col_retrofit(post_output_df, input$period, input$energy_type)
+    }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
 
 })

@@ -1,71 +1,159 @@
 library(plotly)
 
+#x_vec = c(min(OAT), max(OAT))
+fitline_func <- function(x_vec, model_params){
+  switch(as.character(model_params$model_type),
+      "5P" = {
+        x = c(x_vec, model_params$xcp1, model_params$xcp2)
+        return(fit_5p_func(x, model_params))
+      },
+      "4P" = {
+        x = c(x_vec, model_params$xcp1)
+        return(fit_4p_func(x, model_params))
+      },
+      "3PH" = {
+        x = c(x_vec, model_params$xcp1)
+        return(fit_3ph_func(x, model_params))
+      },
+      "3PC" = {
+        x = c(x_vec, model_params$xcp1)
+        return(fit_3pc_func(x, model_params))
+      },
+      "2P" = {
+        return(fit_2p_func(x_vec, model_params))
+      }
+  )
+}
 
-plot_model <- function(x, model, B, cp1, cp2, energy, unit, p1 = plot_ly())
-{
-  options(digits=15)
-  require(ggplot2)
+fit_5p_func <- function(x, model_params){
+  yInter_1 = model_params$ycp - model_params$ls*model_params$xcp1
+  yInter_2 = model_params$ycp - model_params$rs*model_params$xcp2
+  estimated = ifelse(x <= model_params$xcp1, yInter_1 + model_params$ls*x, ifelse(x >= model_params$xcp2, yInter_2 + model_params$rs*x, model_params$ycp))
+  estimated = estimated[order(x)]
   x = x[order(x)]
-  x0 = x[1]
-  xf = x[length(x)]
-  Ycp= B[1] #coeff, need this to get y intercept
-  slope1 = B[2]
-  yInter_1 = Ycp - slope1*cp1
+  return(list(x=x, y=estimated))
+}
 
-  if (length(B) == 3) # 4P or 5p
-  {
-    slope2 = B[3]
-    if (cp2 == 0) # 4P
-    {
-      yInter_2 = Ycp - slope2*cp1
-    }else # 5P
-    {
-      yInter_2 = Ycp - slope2*cp2
-    }
-  }
+fit_4p_func <- function(x, model_params){
+  yInter_1 = model_params$ycp - model_params$ls*model_params$xcp1
+  yInter_2 = model_params$ycp - model_params$rs*model_params$xcp1
+  estimated =ifelse(x <= model_params$xcp1, yInter_1 + model_params$ls*x, yInter_2 + model_params$rs*x)
+  estimated = estimated[order(x)]
+  x = x[order(x)]
+  return(list(x=x, y=estimated))
+}
 
-  if (model == '5P')
-  {
-    x = c(x0, cp1, cp2, xf)
-    estimated = ifelse(x <= cp1, yInter_1 + slope1*x, ifelse(x >= cp2, yInter_2 + slope2*x,Ycp))
-  }else if (model  == '4P')
-  {
-    x = c(x0, cp1, xf)
-    estimated =ifelse(x <= cp1, yInter_1 + slope1*x, yInter_2 + slope2*x)
-  }else if (model == '3PH')
-  {
-    x = c(x0, cp1, xf)
-    estimated = ifelse(x <= cp1, yInter_1 + slope1*x, Ycp)
-  }else if (model == '3PC')
-  {
-    x = c(x0, cp1, xf)
-    estimated = ifelse(x > cp1, yInter_1 + slope1*x, Ycp)
-  }else
-  {
-    x = c(x0, xf)
-    estimated = Ycp + slope1*x
-  }
+fit_3ph_func <- function(x, model_params){
+  yInter_1 = model_params$ycp - model_params$ls*model_params$xcp1
+  estimated = ifelse(x <= model_params$xcp1, yInter_1 + model_params$ls*x, model_params$ycp)
+  estimated = estimated[order(x)]
+  x = x[order(x)]
+  return(list(x=x, y=estimated))
+}
 
-  if (unit){
-    df = data.frame(x = x, y = estimated*3412.14)
-  }else
-  {
-    df = data.frame(x = x, y = estimated)
-  }
 
-  switch(energy, 'Elec' = {
-    color_n = 'rgba(51, 113, 213, 1)'
-    name_n = 'Elec Model'
-    },
-    'Fuel'= {
-    color_n = 'rgba(240, 24, 28,1)'
-    name_n = 'Fuel Model'
-      })
+fit_3pc_func <- function(x, model_params){
+  yInter_1 = model_params$ycp - model_params$rs*model_params$xcp1
+  estimated = ifelse(x > model_params$xcp1, yInter_1 + model_params$rs*x, model_params$ycp)
+  estimated = estimated[order(x)]
+  x = x[order(x)]
+  return(list(x=x, y=estimated))
+}
 
-  #model_fig = geom_line(data = df, aes(x = x, y = y, color = 'Elec Model'), linetype = 2)
-  model_fig = add_trace(p = p1, x = ~df$x, y = ~df$y, type ='scatter', mode = 'lines', line = list(color = color_n, dash = 'solid'), name = name_n, inherit = FALSE)
+fit_2p_func <- function(x, model_params){
+  yInter_1 = model_params$xcp2 - model_params$rs*model_params$xcp1
+  estimated = model_params$ycp + model_params$rs*x
+}
 
+plot_model <- function(x, y, energy, pre_key, p1 = plot_ly(), retrofit = FALSE)
+{
+  switch(as.character(pre_key),
+    "1" = {
+      pre_title = ifelse(retrofit, 'Pre', '')
+      color_n = switch(as.character(energy), 'Elec' = 'rgba(51, 113, 213, 1)', 'rgba(240, 24, 28,1)')
+      },
+    "3" ={
+      pre_title = 'Post'
+      color_n = 'rgba(109, 203, 15, 1)'
+      }
+  )
+
+  name_n = paste(pre_title, energy, 'Model')
+  model_fig = add_trace(p = p1,  x = ~x, y = ~y, type ='scatter', mode = 'lines', line = list(color = color_n), name = name_n, inherit = FALSE)
   return(model_fig)
+}
+
+plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), retrofit = FALSE, b_name = '')
+{
+  util_act = subset(df, df$estimated == 1)
+  util_est = subset(df, df$estimated == 0)
+
+  switch(as.character(pre_key),
+    "1" = {
+      pre_title = ifelse(retrofit, 'Pre', '')
+      color_n = switch(as.character(energy), 'Elec' = 'rgba(51, 113, 213, 1)', 'rgba(240, 24, 28,1)')
+      },
+    "3" ={
+      pre_title = 'Post'
+      color_n = 'rgba(109, 203, 15, 1)'
+    }
+    )
+
+  name_n = paste(pre_title, energy)
+
+  axis_title = switch(as.character(energy), 'Elec' = "Usage (kWh)", "Usage (BTU)")
+
+  point_fig_act = add_trace(p = model_fig, x = ~util_act$OAT, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = paste(name_n, 'Act'), inherit = FALSE)
+  point_fig = add_trace(p = point_fig_act, x = ~util_est$OAT, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = paste(name_n, 'Est'), inherit = FALSE)%>%
+    layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
+      xaxis = list(title = "Temperature"),
+      yaxis = list(title = axis_title))
+
+  return(point_fig)
+}
+
+#just pass necessary frames, handle both baseline and retrofit, unique values of energy and bdbid; handle no model, just pass empty frame
+main_param_plot <- function(utility, best_model, b_name = ''){
+  best_row = as.character(nrow(best_model))
+  switch(best_row,
+    "0" = { #only points
+      energy = unique(utility$energy_type)
+      prepost = unique(utility$prepost)
+
+      if(length(prepost) == 1){ #baseline
+        fig = plot_point(utility, energy, prepost, model_fig = plot_ly(), retrofit=FALSE, b_name = b_name)
+      }else{ #retrofit
+        pre_util = subset(utility, utility$prepost == 1)
+        pre_fig = plot_point(pre_util, energy, 1, model_fig = plot_ly(), retrofit=TRUE, b_name = b_name)
+
+        post_util = subset(utility, utility$prepost == 3)
+        fig = plot_point(post_util, energy, 3, model_fig = pre_fig, retrofit=TRUE, b_name = b_name)
+      }
+    },
+    "1" = { #baseline
+      fig = general_plot_func(utility, as.list(best_model), p1 = plot_ly(), retrofit=FALSE, b_name = b_name)
+    },
+    "2" = { #retrofit
+      pre_util = subset(utility, utility$prepost == 1)
+      pre_best = subset(best_model, best_model$prepost == 1)
+      pre_fig = general_plot_func(pre_util, as.list(pre_best), p1 = plot_ly(), retrofit=TRUE, b_name = b_name)
+
+      post_util = subset(utility, utility$prepost == 3)
+      post_best = subset(best_model, best_model$prepost == 3)
+      fig = general_plot_func(post_util, as.list(post_best), p1 = pre_fig, retrofit=TRUE, b_name = b_name)
+    }
+  )
+  return(fig)
+}
+
+#only take frames with one unique value of energy, bdbid, prepost
+general_plot_func <- function(utility, best_model, p1 = plot_ly(), retrofit=FALSE, b_name =''){
+  x_vec = c(min(utility$OAT, na.rm=TRUE), max(utility$OAT, na.rm=TRUE))
+  fit_out = fitline_func(x_vec, best_model)
+  model_fig = plot_model(fit_out$x, fit_out$y, best_model$energy_type, best_model$prepost, p1=p1, retrofit=retrofit)
+  print('fuck')
+  final_fig = plot_point(utility, best_model$energy_type, best_model$prepost, model_fig = model_fig, retrofit=retrofit, b_name = b_name)
+  return(final_fig)
 }
 
 flag_func <- function(df, bdbid_n, energy)
@@ -85,6 +173,16 @@ flag_func <- function(df, bdbid_n, energy)
   return(flag)
 }
 
+percent_heat_cool_func <- function(df)
+{
+  options(digits=15)
+  df$percent_cooling = 100*df$cool_load/df$total_consumption
+  df$percent_heating = 100*df$heat_load/df$total_consumption
+  df$percent_baseload = 100 - df$percent_cooling - df$percent_heating
+  df$baseload = df$total_consumption*df$percent_baseload
+  return(df)
+}
+
 
 params_list <- function(best_model, bdbid, energy, prepost)
 {
@@ -101,12 +199,12 @@ params_list <- function(best_model, bdbid, energy, prepost)
   return(list(model = model, Ycp = Ycp, cp1 = cp1, cp2 = cp2, slope1 = slope1, slope2 = slope2))
 }
 
-params_table <- function(best_model, bdbid, energy)
+params_table <- function(best_model, bdbid, energy, pre_key)
 {
   if(flag_func(best_model, bdbid, energy))
   {
-    pl = params_list(best_model, bdbid, energy, 1)
-    df = data.frame(Model = as.character(pl$model), Ycp = pl$Ycp, cp1 = pl$cp1, cp2 = pl$cp2, slope1 = pl$slope1, Slope2 = pl$slope2)
+    pl = params_list(best_model, bdbid, energy, pre_key)
+    df = data.frame(Model = as.character(pl$model), Prepost = pre_key, Ycp = pl$Ycp, cp1 = pl$cp1, cp2 = pl$cp2, slope1 = pl$slope1, Slope2 = pl$slope2)
   }else
   {
     df = data.frame(NULL)
@@ -127,6 +225,39 @@ params_matrix <- function(params_vec)
   return(B)
 }
 
+post_output_retrofit <- function(post_df,  bdbid_n, energy)
+{
+  options(digits=15)
+  if (bdbid_n %in% unique(post_df$bdbid) & energy %in% unique(post_df$energy_type[post_df$bdbid == bdbid_n]))
+  {
+    post_df = subset(post_df, bdbid == bdbid_n & energy_type == energy)
+    flag = TRUE
+  }else
+  {
+    flag = FALSE
+  }
+
+  if (flag)
+  {
+    post_df = post_df[, c('model_type','prepost', 'heat_load', 'cool_load', 'total_consumption', 'percent_cooling', 'percent_heating', 'percent_baseload', 'cooling_change_point', 'heating_change_point')]
+    if (length(post_df$prepost) == 2)
+    {
+      post_df$prepost = ifelse(post_df$prepost == 1, 'pre', 'post')
+    }else
+    {
+      post_df$prepost = ifelse(post_df$prepost == 1, 'pre', 'post')
+    }
+
+    post_df = t(post_df)
+    colnames(post_df) = as.vector(post_df['prepost',])
+    post_df = post_df[!(rownames(post_df)%in%c('prepost')),]
+  }else
+  {
+    post_df = data.frame(NULL)
+  }
+
+  return(post_df)
+}
 
 post_output <- function(post_df,  bdbid_n, energy)
 {
@@ -212,6 +343,29 @@ post_col <- function(post_df, n, energy)
     }else
     {
       post_df$Units = c('model_type', 'BTU/sqft/day', 'BTU/sqft/day', 'BTU/sqft', '%', '%', '%', 'BTU/sqft','F', 'F', 'Months')
+    }
+  }else
+  {
+    post_df = data.frame(NULL)
+  }
+
+  return(post_df)
+}
+
+post_col_retrofit <- function(post_df, n, energy)
+{
+  options(digits=15)
+  if (length(post_df))
+  {
+    post_df = rbind(post_df, n)
+    rownames(post_df) = c('Model Type','Estimated Heating', 'Estimated Cooling', 'Total Consumption', 'Percent Cooling', 'Percent Heating', 'Percent Baseload', 'Cooling Change-Point', 'Heating Change-Point', 'Total Points Observed')
+    post_df = data.frame(post_df)
+    if (energy == 'Elec')
+    {
+     post_df$Units = c('model_type', 'kWh', 'kWh', 'kWh', '%', '%', '%', 'F', 'F', 'Months')
+    }else
+    {
+     post_df$Units = c('model_type', 'BTU', 'BTU', 'BTU', '%', '%', '%', 'F', 'F', 'Months')
     }
   }else
   {
@@ -472,40 +626,6 @@ elec_fuel_graph_func <- function(temp_df, best_model, bdbid_n, b_name = "", heig
     return(p)
 }
 
-plot_point_2 <- function(df, energy, model_fig = plot_ly(), b_name, unit = FALSE)
-{
-
-  if (unit)
-  {
-    df$y =  df$y*3412.14
-  }
-
-  util_act = subset(df, df$z == 'Act')
-  util_est = subset(df, df$z == 'Est')
-
-  switch(energy, 'Elec' = {
-    color_n = 'rgba(51, 113, 213, 1)'
-    y_title = "Usage (kWh)"
-    },
-    'Fuel' = {
-    color_n = 'rgba(240, 24, 28,1)'
-    y_title = "Usage (BTU)"
-    }
-  )
-
-  name_act = paste(energy, 'Act')
-  name_est = paste(energy, 'Est')
-
-    #point_fig = geom_point(data = df, aes(x = x, y= y, shape= factor(z), color = 'Elec Consumption'))
-  point_fig_act = add_trace(p = model_fig, x = ~util_act$x, y = ~util_act$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = name_act, inherit = FALSE)
-  point_fig = add_trace(p = point_fig_act, x = ~util_est$x, y = ~util_est$y, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = name_est, inherit = FALSE)%>%
-    layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
-      xaxis = list(title = "Temperature"),
-      yaxis = list(title = y_title))
-
-  return(point_fig)
-}
-
 
 plot_timeseries <- function(util, energy, sqft_flag)
 {
@@ -604,54 +724,6 @@ fuel_oil_message <- function(flag)
   {
       ""
   }
-}
-
-
-main_plot <- function(temp_df, best_model, bdbid_n, energy, b_name = "")
-{
-  util_energy_type = subset(temp_df$energy_type, temp_df$bdbid == bdbid_n)
-  if (energy %in% util_energy_type)
-  {
-    #susbset by energy now
-    util = subset(temp_df, bdbid == bdbid_n & temp_df$energy_type == energy)
-
-    util$estimated[util$estimated == 1] <- 'Est'
-    util$estimated[util$estimated != 'Est'] <- 'Act'
-
-    df1 = data.frame(x = util$OAT, y = util$usage, z = util$estimated) #ready for point plot
-
-    if (bdbid_n %in% unique(best_model$bdbid)) #bdbid is in best_model
-    {
-      best_energy_type = subset(best_model$energy_type, best_model$bdbid == bdbid_n)
-
-      if(energy %in% best_energy_type) #energy and bdbid is in util and best
-      {
-        final_figure = main_line_point_plot(df1, best_model, bdbid_n, energy, b_name)
-      }else #if FALSE, it means energy is not in best model so just point plot
-      {
-        final_figure = plot_point_2(df1, energy, b_name = b_name)
-      }
-    }else #if FALSE, it means bdbid does not make it to best_model so just point plot
-    {
-      final_figure = plot_point_2(df1, energy, b_name = b_name)
-    }
-  }else #if FALSE, it means energy is not in util frame so empty plot
-  {
-    final_figure = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy, "for", b_name))
-  }
-  return(final_figure)
-}
-
-main_line_point_plot <- function(df1, best_model, bdbid_n, energy, b_name, unit = FALSE, p_init = plot_ly())
-{
-  params = params_list(best_model, bdbid_n, energy, 1)
-  B = params_matrix(params)
-  x1 = df1$x
-
-  model_fig = plot_model(x1, params$model, B, params$cp1, params$cp2, energy, unit, p_init)
-  final_figure = plot_point_2(df1, energy, model_fig, b_name, unit)
-
-  return(final_figure)
 }
 
 stat_param_table <- function(best_model, bdbid_n, energy_n)
