@@ -104,8 +104,12 @@ shinyServer(function(input, output, session) {
   observeEvent(input$login_button, {
       cache_init(base_url = 'staging', api_url = 'https://api.testing.cunybplservices.fun/', ssl_verify = FALSE)
       result = tryCatch({
+                    print('boo boo boo')
                     fetch_auth_token(input$user_name, input$password)},
-                    error = function(e){NULL}
+                    error = function(e){
+                      print(e)
+                      return(NULL)
+                    }
               )
       if(is.null(result))
       {

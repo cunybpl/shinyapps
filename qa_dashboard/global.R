@@ -63,6 +63,7 @@ fit_3pc_func <- function(x, model_params){
 fit_2p_func <- function(x, model_params){
   yInter_1 = model_params$xcp2 - model_params$rs*model_params$xcp1
   estimated = model_params$ycp + model_params$rs*x
+  return(list(x=x, y=estimated))
 }
 
 plot_model <- function(x, y, energy, pre_key, p1 = plot_ly(), retrofit = FALSE)
@@ -131,16 +132,16 @@ main_param_plot <- function(utility, best_model, b_name = ''){
       }
     },
     "1" = { #baseline
-      fig = general_plot_func(utility, as.list(best_model), p1 = plot_ly(), retrofit=FALSE, b_name = b_name)
+      fig = general_plot_func(utility, best_model, p1 = plot_ly(), retrofit=FALSE, b_name = b_name)
     },
     "2" = { #retrofit
       pre_util = subset(utility, utility$prepost == 1)
       pre_best = subset(best_model, best_model$prepost == 1)
-      pre_fig = general_plot_func(pre_util, as.list(pre_best), p1 = plot_ly(), retrofit=TRUE, b_name = b_name)
+      pre_fig = general_plot_func(pre_util, pre_best, p1 = plot_ly(), retrofit=TRUE, b_name = b_name)
 
       post_util = subset(utility, utility$prepost == 3)
       post_best = subset(best_model, best_model$prepost == 3)
-      fig = general_plot_func(post_util, as.list(post_best), p1 = pre_fig, retrofit=TRUE, b_name = b_name)
+      fig = general_plot_func(post_util, post_best, p1 = pre_fig, retrofit=TRUE, b_name = b_name)
     }
   )
   return(fig)
@@ -151,7 +152,6 @@ general_plot_func <- function(utility, best_model, p1 = plot_ly(), retrofit=FALS
   x_vec = c(min(utility$OAT, na.rm=TRUE), max(utility$OAT, na.rm=TRUE))
   fit_out = fitline_func(x_vec, best_model)
   model_fig = plot_model(fit_out$x, fit_out$y, best_model$energy_type, best_model$prepost, p1=p1, retrofit=retrofit)
-  print('fuck')
   final_fig = plot_point(utility, best_model$energy_type, best_model$prepost, model_fig = model_fig, retrofit=retrofit, b_name = b_name)
   return(final_fig)
 }
