@@ -104,9 +104,9 @@ plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), retrofit = FA
 
   axis_title = switch(as.character(energy), 'Elec' = "Usage (kWh)", "Usage (BTU)")
 
-  point_fig_act = add_trace(p = model_fig, x = ~util_act$OAT, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = paste(name_n, 'Act'), inherit = FALSE)
-  point_fig = add_trace(p = point_fig_act, x = ~util_est$OAT, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = paste(name_n, 'Est'), inherit = FALSE)%>%
-    layout(title = b_name, showlegend = TRUE, margin = list(b = 100),
+  point_fig_act = add_trace(p = model_fig, x = ~util_act$oat, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = paste(name_n, 'Act'), inherit = FALSE)
+  point_fig = add_trace(p = point_fig_act, x = ~util_est$oat, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = paste(name_n, 'Est'), inherit = FALSE)%>%
+    layout(title = b_name, showlegend = TRUE, margin = list(b = 100), plot_bgcolor='rgb(240, 242, 247)', paper_bgcolor='rgb(240, 242, 247)',
       xaxis = list(title = "Temperature"),
       yaxis = list(title = axis_title))
 
@@ -116,6 +116,10 @@ plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), retrofit = FA
 #just pass necessary frames, handle both baseline and retrofit, unique values of energy and bdbid; handle no model, just pass empty frame
 main_param_plot <- function(utility, best_model, b_name = ''){
   best_row = as.character(nrow(best_model))
+  print('best_row')
+  print(best_row)
+  print(class(best_row))
+  print(best_model)
   switch(best_row,
     "0" = { #only points
       energy = unique(utility$energy_type)
@@ -149,7 +153,7 @@ main_param_plot <- function(utility, best_model, b_name = ''){
 
 #only take frames with one unique value of energy, bdbid, prepost
 general_plot_func <- function(utility, best_model, p1 = plot_ly(), retrofit=FALSE, b_name =''){
-  x_vec = c(min(utility$OAT, na.rm=TRUE), max(utility$OAT, na.rm=TRUE))
+  x_vec = c(min(utility$oat, na.rm=TRUE), max(utility$oat, na.rm=TRUE))
   fit_out = fitline_func(x_vec, best_model)
   model_fig = plot_model(fit_out$x, fit_out$y, best_model$energy_type, best_model$prepost, p1=p1, retrofit=retrofit)
   final_fig = plot_point(utility, best_model$energy_type, best_model$prepost, model_fig = model_fig, retrofit=retrofit, b_name = b_name)
@@ -599,7 +603,7 @@ per_num_func <- function(df, bdbid_n, energy)
       numeric_df = numeric_get(df, bdbid_n, energy, model)
     }else
     {
-      percent_fig = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy, sep = " "))
+      percent_fig = plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', energy, sep = " "), paper_bgcolor='rgb(240, 242, 247)', plot_bgcolor='rgb(240, 242, 247)')
       numeric_df = data.frame(NULL)
     }
 
@@ -613,7 +617,7 @@ elec_fuel_graph_func <- function(temp_df, best_model, bdbid_n, b_name = "", heig
 
     p = plot_ly()
     for(energy in c('Elec', 'Fuel')){
-      x1 = subset(util$OAT, util$energy_type == energy)
+      x1 = subset(util$oat, util$energy_type == energy)
       y1 = subset(util$usage, util$energy_type == energy)
       z1 = ifelse(subset(util$estimated, util$energy_type == energy) == 1, 'Est', 'Act')
       df1 = data.frame(x = x1, y = y1, z = z1)
@@ -627,7 +631,7 @@ elec_fuel_graph_func <- function(temp_df, best_model, bdbid_n, b_name = "", heig
 }
 
 
-plot_timeseries <- function(util, energy, sqft_flag)
+plot_timeseries <- function(util, energy)
 {
   #plot timeseries. Unlike pplot_timeseries function, it also plots points and the shape of the points is now adjusted (Act or Est)
   options(digits=15)
@@ -657,12 +661,12 @@ plot_timeseries <- function(util, energy, sqft_flag)
   )
 
   p <- plot_ly() %>%
-      add_trace(x = ~util$end_date, y = ~util$OAT, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
+      add_trace(x = ~util$end_date, y = ~util$oat, type ='scatter', mode = 'lines', line = list(color = 'rgba(243, 154, 36, 1)'), name = "OAT", yaxis = "y2") %>%
       add_trace(x = ~util$end_date, y = ~util$usage, type ='scatter', mode = 'lines', line = list(color = color_n), name = "Usage") %>%
       add_trace(x = ~util_est$end_date, y = ~util_est$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle-open', color = color_n, size = 9), name = 'Est') %>%
       add_trace(x = ~util_act$end_date, y = ~util_act$usage, type ='scatter', mode ='markers', marker = list(symbol = 'circle', color = color_n, size = 9), name = 'Act') %>%
       layout(
-      title = "Time Series", yaxis2 = ay, yaxis = list(title= y_title), margin = list(b = 100),
+      title = "Time Series", paper_bgcolor='rgb(240, 242, 247)', plot_bgcolor='rgb(240, 242, 247)', yaxis2 = ay, yaxis = list(title= y_title), margin = list(b = 100),
       xaxis = list(type = "date", title="Date", tickformat = '%b-%y', tickvals = util$end_date))
 
   return(p)
@@ -1056,4 +1060,12 @@ get_batch_result <- function(url, query){
     Sys.sleep(delay_n)
   }
   return(res)
+}
+
+char_to_vec <- function(x){
+  if (is.vector(x)){
+    return(x)
+  }else{
+    return(c(x))
+  }
 }

@@ -4,86 +4,23 @@ library(plotly)
 library(DT)
 shinyServer(function(input, output, session) {
 #### UI code --------------------------------------------------------------
-  output$ui <- renderUI({
-    if (user_input$authenticated == FALSE) {
-      ##### UI code for login page
-      fluidPage(
-        fluidRow(
-          column(width = 2, offset = 5,
-            br(), br(), br(), br(),
-            uiOutput("uiLogin"),
-            uiOutput("pass")
-          )
+
+  output$log_in_ui <- renderUI({
+    if (user_input$authenticated == FALSE){
+
+    fluidPage(
+      fluidRow(
+        column(width = 2, offset = 5,
+          br(), br(), br(), br(),
+          uiOutput("uiLogin"),
+          uiOutput("pass")
         )
       )
-    } else {
-      #### Your app's UI code goes here!
-      fluidPage(
-          titlePanel('QA Dashboard'),
-          fluidRow(width = 12,
-          sidebarLayout(
-          column(width = 4,
-          sidebarPanel(style = "position:fixed;width:inherit;",width = 4,
-            uiOutput('bdbid_wiggy'),
-            uiOutput('period_wiggy'),
-            fluidRow(
-                column(4, uiOutput('fiscal_wiggy')),
-                column(6, uiOutput('sqft_wiggy'))
-            ),
-            uiOutput('tar_date_wiggy'),
-            uiOutput('retro_start_wiggy'),
-            uiOutput('retro_end_wiggy'),
-            uiOutput('energy_wiggy')
-          )),
-          column(width = 8,
-          mainPanel(width = 12,
-            tabsetPanel(
-              tabPanel("App Info",
-                h5('To get started, Utility CSV must be uploaded.')
-              ),
-        tabPanel("Graphs & Tables for Baseline",
-            h3("Building Information"),
-            br(),
-            fluidRow(
-                column(6, tableOutput('base_binfo_df1')),
-                column(width = 6, tableOutput('base_binfo_df2'))
-            ),
-            h3("Time Series", align = "center"),
-            plotlyOutput('base_timeseries'),
-            h3("Parameter Model Graph", align = "center"),
-            plotlyOutput('base_param_plot'),
-            br(),
-            tableOutput('base_param_df'),
-            br(),
-            tableOutput('base_stat_df'),
-            br(),
-            tableOutput('base_post_df')
-        ),
-        tabPanel("Graphs & Tables for Retrofit",
-            h3("Building Information"),
-            br(),
-            fluidRow(
-                column(6, tableOutput('retro_binfo_df1')),
-                column(width = 6, tableOutput('retro_binfo_df2'))
-            ),
-            h3("Time Series", align = "center"),
-            plotlyOutput('retro_timeseries'),
-            h3("Parameter Model Graph", align = "center"),
-            plotlyOutput('retro_param_plot'),
-            br(),
-            tableOutput('retro_param_df'),
-            br(),
-            tableOutput('retro_stat_df'),
-            br(),
-            tableOutput('retro_post_df')
-        )
-            )#main tab panel
-          )))#main panle
-        )
-      )#fluid page
-    }
+    )
+  }else{
+    textOutput('log_in_page_text')
+  }
   })
-
 
   ##########################################
   ########## LOGIN PAGE STARTS HERE ########
@@ -99,12 +36,16 @@ shinyServer(function(input, output, session) {
     )
   })
 
+  output$log_in_page_text <- renderText({
+    "Already Logged In. It is like hotel california; once you are logged in, you can never get out."
+  })
+
 
   user_input <- reactiveValues(authenticated = FALSE, status = "")
+
   observeEvent(input$login_button, {
       cache_init(base_url = 'staging', api_url = 'https://api.testing.cunybplservices.fun/', ssl_verify = FALSE)
       result = tryCatch({
-                    print('boo boo boo')
                     fetch_auth_token(input$user_name, input$password)},
                     error = function(e){
                       print(e)
@@ -183,13 +124,67 @@ shinyServer(function(input, output, session) {
     )
   })
 
+
+  ##########################################
+  ######## bema model config wiggy #########
+  ##########################################
+
+  ############### Baseline #################
+
+  output$elec_model_ord_base_wiggy <- renderUI({
+    tagList(
+      selectizeInput('elec_model_ord_base', 'Elec Model Ordering', choices = c('5P', '4P', '3PC','2P', '3PH'),
+      selected = c('5P', '4P', '3PC','2P'), multiple = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  output$fuel_model_ord_base_wiggy <- renderUI({
+    tagList(
+      selectizeInput('fuel_model_ord_base', 'Fuel Model Ordering', choices = c('3PH', '4P', '5P','2P', '3PC'),
+      selected = c('3PH', '4P', '5P','2P'), multiple = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  output$elec_r2_base_wiggy <-renderUI({
+    numericInput('elec_r2_base', 'Elec Rsquared Threshold', value = 0.75, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$fuel_r2_base_wiggy <-renderUI({
+    numericInput('fuel_r2_base', 'Fuel Rsquared Threshold', value = 0.75, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$elec_cvrmse_base_wiggy <-renderUI({
+    numericInput('elec_cvrmse_base', 'Elec CVRMSE Threshold', value = 0.25, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$fuel_cvrmse_base_wiggy <-renderUI({
+    numericInput('fuel_cvrmse_base', 'Fuel CVRMSE Threshold', value = 0.50, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$main_test_base_wiggy <- renderUI({
+    checkboxInput('main_test_base', 'Bypass Tests', value = FALSE, width = NULL)
+  })
+
+  output$all_models_base_wiggy <- renderUI({
+    checkboxInput('all_models_base', 'All Models', value = FALSE, width = NULL)
+  })
+
+  output$relax_base_wiggy <- renderUI({
+    checkboxInput('relax_base', 'Relax', value = FALSE, width = NULL)
+  })
+
   ##########################################
   ############# Prepare Queries ############
   ##########################################
 
   baseline_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
-                          fiscal_year=input$fiscal_year, target_date = input$tar_date,
-                          relax = TRUE, invert_order_elec = TRUE, invert_order_fuel = TRUE)})
+                          target_date = input$tar_date,
+                          relax = input$relax_base, elec_model_ordering = char_to_vec(input$elec_model_ord_base),
+                          fuel_model_ordering = char_to_vec(input$fuel_model_ord_base),
+                          elec_r2_threshold = input$elec_r2_base, elec_cvrmse_threshold = input$elec_cvrmse_base,
+                          fuel_r2_threshold = input$fuel_r2_base, fuel_cvrmse_threshold = input$fuel_cvrmse_base,
+                          all_models = input$all_models_base, ignore_main_test = input$main_test_base)
+                          })
 
   retro_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
                           fiscal_year=input$fiscal_year, retrofit_start_date = input$start_date, retrofit_end_date = input$end_date)})
@@ -236,7 +231,7 @@ shinyServer(function(input, output, session) {
   })
 
   best_base <- reactive({
-    df = baseline_batch()$best
+    df = baseline_batch()$changepoint
     if(length(df)){
       best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
       df = missing_cols_handler(best_cols, df)
@@ -261,7 +256,7 @@ shinyServer(function(input, output, session) {
   })
 
   best_retro <- reactive({
-    retro_batch()$best
+    retro_batch()$changepoint
   })
 
   post_retro <- reactive({
@@ -330,7 +325,7 @@ shinyServer(function(input, output, session) {
       plot_timeseries(util, input$energy_type)
     }else
     {
-      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type))
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type),  plot_bgcolor='rgb(240, 242, 247)', paper_bgcolor='rgb(240, 242, 247)')
     }
   })
 
@@ -341,7 +336,7 @@ shinyServer(function(input, output, session) {
       main_param_plot(utility, best_model, b_name())
     }else
     {
-      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type))
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type),  plot_bgcolor='rgb(240, 242, 247)', paper_bgcolor='rgb(240, 242, 247)')
     }
   })
 
@@ -376,7 +371,7 @@ shinyServer(function(input, output, session) {
   output$retro_timeseries <- renderPlotly({
     if (energy_null_flag())
     {
-      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec')
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', input$energy_type),  plot_bgcolor='rgb(240, 242, 247)', paper_bgcolor='rgb(240, 242, 247)')
     }else
     {
       plot_timeseries(util_energy(), 'Elec')
@@ -386,7 +381,7 @@ shinyServer(function(input, output, session) {
   output$retro_param_plot <- renderPlotly({
     if (energy_null_flag())
     {
-      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = 'No data points for Elec'))
+      return(plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No data points for', input$energy_type), plot_bgcolor='rgb(240, 242, 247)', paper_bgcolor='rgb(240, 242, 247)'))
     }else{
       best_model = subset(best_retro(), best_retro()$bdbid == input$bdbid & best_retro()$energy_type == input$energy_type)
       main_param_plot(util_energy(), best_model, b_name())
