@@ -1091,3 +1091,9 @@ choose_best_func <- function(df){
     return(df$label[1])
   }
 }
+
+fiscal_year_shcemea <- function(target_date, period){
+  fiscal_year = as.numeric(strsplit(target_date, '-')[[1]][1])
+  fy_str = ifelse(period == 12, fiscal_year, paste(fiscal_year, fiscal_year-1, sep =','))
+  return(fy_str)
+}

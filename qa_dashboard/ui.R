@@ -11,7 +11,6 @@ ui <- dashboardPage(
             uiOutput('bdbid_wiggy'),
             uiOutput('period_wiggy'),
             fluidRow(
-                column(4, uiOutput('fiscal_wiggy')),
                 column(6, uiOutput('sqft_wiggy'))
             ),
             uiOutput('tar_date_wiggy'),
@@ -56,15 +55,29 @@ ui <- dashboardPage(
                 ),#boxes
                 h3("Time Series", align = "center"),
                 plotlyOutput('base_timeseries'),
-                h3("Parameter Model Graph", align = "center"),
-                plotlyOutput('base_param_plot'),
+                fluidRow(
+                  tabBox(title = 'Parameter Model Graph', width = 24,
+                    tabPanel('Baseline',
+                      plotlyOutput('base_param_plot')
+                    ), #base plot
+                    tabPanel('Portfolio',
+                      plotlyOutput('port_base_param_plot')
+                    )
+                  )#end of plot box
+                ),#parameter plots for base and port_base
                 br(),
                 uiOutput('model_base_wiggy'),
                 br(),
+                h4('Baseline Model Results'),
                 tableOutput('base_param_df'),
                 br(),
                 tableOutput('base_stat_df'),
+                h4('Portfolio Model Results'),
+                tableOutput('port_base_param_df'),
                 br(),
+                tableOutput('port_base_stat_df'),
+                br(),
+                h4('Baseline Post Model'),
                 tableOutput('base_post_df')
               ), #baseline
               tabItem(tabName = 'retrofit',

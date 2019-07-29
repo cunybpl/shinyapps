@@ -37,7 +37,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$log_in_page_text <- renderText({
-    "Already Logged In. It is like hotel california; once you are logged in, you can never get out."
+    "Already Logged In. It is like Hotel California; once you are logged in, you can never get out."
   })
 
 
@@ -86,12 +86,6 @@ shinyServer(function(input, output, session) {
 
   output$period_wiggy <- renderUI({
     numericInput('period', 'Period', value = 12, min = NA, max = NA, step = 12, width = NULL)
-    })
-
-  output$fiscal_wiggy <- renderUI({
-    tagList(
-      checkboxInput('fiscal_year', 'Fiscal Year', value = FALSE, width = NULL)
-    )
     })
 
   output$sqft_wiggy <- renderUI({
@@ -184,7 +178,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$relax_base_wiggy <- renderUI({
-    checkboxInput('relax_base', 'Frankie says Relax', value = FALSE, width = NULL)
+    checkboxInput('relax_base', 'Relax', value = FALSE, width = NULL)
   })
 
   ################ Retrofit ################
@@ -228,7 +222,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$relax_retro_wiggy <- renderUI({
-    checkboxInput('relax_retro', 'Frankie says Relax', value = TRUE, width = NULL)
+    checkboxInput('relax_retro', 'Relax', value = TRUE, width = NULL)
   })
 
   ##########################################
@@ -245,7 +239,7 @@ shinyServer(function(input, output, session) {
                           })
 
   retro_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
-                          fiscal_year=input$fiscal_year, retrofit_start_date = input$start_date, retrofit_end_date = input$end_date)})
+                          retrofit_start_date = input$start_date, retrofit_end_date = input$end_date)})
 
   ##########################################
   ####### GATHER AROUND, DATA IS HERE ######
@@ -501,5 +495,81 @@ shinyServer(function(input, output, session) {
     post_output_df = post_output_retrofit(post_retro(), input$bdbid, input$energy_type)
     post_output_df = post_col_retrofit(post_output_df, input$period, input$energy_type)
     }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
+
+
+  ########################################
+  ############## Portfolio ###############
+  ########################################
+
+  ############ input for query ###########
+
+  fiscal_year <- reactive({
+    fiscal_year_shcemea(input$tar_date, input$period)
+  })
+
+  ############### get data ###############
+
+  utility_port_base <- reactive({
+    df = fetch_request('portfolios/utility/', query_params=list(bdbid = input$bdbid, fiscal_year = fiscal_year()))$result
+    if (length(df))
+    {
+      colnames(df)[colnames(df) == 'OAT'] = 'oat'
+      util_cols = c("using_sqft", "using_fuel_oil")
+      df = missing_cols_handler(util_cols, df)
+      return(df)
+    }else
+    {
+      return(NULL)
+    }
+  })
+
+  best_port_base <- reactive({
+    df = fetch_request('portfolios/changepoint-model/', query_params=list(bdbid = input$bdbid, fiscal_year = fiscal_year()))$result
+
+    if (length(df))
+    {
+      if(!('prepost' %in% colnames(df))){df$prepost = 1}
+      best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
+      df = missing_cols_handler(best_cols, df)
+      return(df)
+    }else
+    {
+      return(NULL)
+    }
+  })
+
+  post_port_base <- reactive({
+    if(is.null(best_port_base()))
+    {
+      return(NULL)
+    }
+
+    df = fetch_request('portfolios/bestmodel-loads-sensitivity/', query_params=list(bdbid = input$bdbid, fiscal_year = fiscal_year()))$result
+    post_cols = c("sitename", 'period', 'percent_cooling', 'percent_heating', 'percent_baseload', "session_id")
+    df = missing_cols_handler(post_cols, df)
+    return(df)
+  })
+
+  ############### output #################
+
+  output$port_base_param_plot <- renderPlotly({
+    utility = subset(utility_port_base(), utility_port_base()$bdbid == input$bdbid & utility_port_base()$energy_type == input$energy_type)
+    if(length(utility)){
+      best_model = subset(best_port_base(), best_port_base()$bdbid == input$bdbid & best_port_base()$energy_type == input$energy_type & best_port_base()$model_type == base_model_type())
+      main_param_plot(utility, best_model, b_name())
+    }else
+    {
+      plotly_empty(type = 'scatter', mode = 'markers') %>% layout(title = paste('No usage points for', input$energy_type),  plot_bgcolor='rgb(240, 242, 247)', paper_bgcolor='rgb(240, 242, 247)')
+    }
+  })
+
+  output$port_base_param_df <- renderTable({
+      params_table(best_port_base(), input$bdbid, input$energy_type, 1, base_model_type())
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$port_base_stat_df <- renderTable({
+      stat_table(best_port_base(), input$bdbid, input$energy_type, base_model_type())
+  }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
 
 })
