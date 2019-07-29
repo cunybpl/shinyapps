@@ -116,10 +116,6 @@ plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), retrofit = FA
 #just pass necessary frames, handle both baseline and retrofit, unique values of energy and bdbid; handle no model, just pass empty frame
 main_param_plot <- function(utility, best_model, b_name = ''){
   best_row = as.character(nrow(best_model))
-  print('best_row')
-  print(best_row)
-  print(class(best_row))
-  print(best_model)
   switch(best_row,
     "0" = { #only points
       energy = unique(utility$energy_type)
@@ -203,10 +199,13 @@ params_list <- function(best_model, bdbid, energy, prepost)
   return(list(model = model, Ycp = Ycp, cp1 = cp1, cp2 = cp2, slope1 = slope1, slope2 = slope2))
 }
 
-params_table <- function(best_model, bdbid, energy, pre_key)
+params_table <- function(best_model, bdbid, energy, pre_key, model_type_n = NULL)
 {
   if(flag_func(best_model, bdbid, energy))
   {
+    if(!is.null(model_type_n)){
+      best_model = subset(best_model, best_model$model_type == as.character(model_type_n))
+    }
     pl = params_list(best_model, bdbid, energy, pre_key)
     df = data.frame(Model = as.character(pl$model), Prepost = pre_key, Ycp = pl$Ycp, cp1 = pl$cp1, cp2 = pl$cp2, slope1 = pl$slope1, Slope2 = pl$slope2)
   }else
@@ -263,11 +262,13 @@ post_output_retrofit <- function(post_df,  bdbid_n, energy)
   return(post_df)
 }
 
-post_output <- function(post_df,  bdbid_n, energy)
+post_output <- function(post_df,  bdbid_n, energy, model_type_n = NULL)
 {
   options(digits=15)
-  if (bdbid_n %in% unique(post_df$bdbid) & energy %in% unique(post_df$energy_type[post_df$bdbid == bdbid_n]))
-  {
+  if (bdbid_n %in% unique(post_df$bdbid) & energy %in% unique(post_df$energy_type[post_df$bdbid == bdbid_n])){
+    if(!is.null(model_type_n)){
+      post_df = subset(post_df, post_df$model_type == as.character(model_type_n))
+    }
     post_df = subset(post_df, bdbid == bdbid_n & energy_type == energy)
     flag = TRUE
   }else
@@ -407,10 +408,15 @@ post_gross <- function(post_output_df, area, energy_n) # area = binfo_output_lis
   return(post_output_df)
 }
 
-stat_table <- function(best_model, bdbid_n, energy_n)
+stat_table <- function(best_model, bdbid_n, energy_n, model_type_n = NULL)
 {
   if (flag_func(best_model, bdbid_n, energy_n))
   {
+    if(!is.null(model_type_n)){
+      print('it went in')
+      best_model = subset(best_model, best_model$model_type == as.character(model_type_n))
+    }
+    print(nrow(best_model))
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'period')]
   }else
@@ -919,9 +925,9 @@ make_break_table <- function(df)
   return(df)
 }
 
-post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n)
+post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n, model_type_n = NULL)
 {
-    post_output_df = post_output(post_df, bdbid_n, energy_n)
+    post_output_df = post_output(post_df, bdbid_n, energy_n, model_type_n)
     post_output_df = post_col(post_output_df, n, energy_n)
 
     if(area_info$flag_area)
@@ -1050,9 +1056,10 @@ chunky_paginator <- function(url = '', bdbid_vec = c(), query_params = list(), c
 
 get_batch_result <- function(url, query){
   delay_n = 0.1
-  task_id = post_request(url, payload = query)$task_id
+  task_id = post_request(url, payload = query)
+  print(task_id)
   for (i in c(1:20)){
-    res = fetch_request(paste('/bema/results/', task_id, sep =''))
+    res = fetch_request(paste('/bema/results/', task_id$task_id, sep =''))
     if (res$status == 'SUCCESS'){
       break
     }
@@ -1067,5 +1074,20 @@ char_to_vec <- function(x){
     return(x)
   }else{
     return(c(x))
+  }
+}
+
+model_label_maker <- function(df){
+  df = data.frame(model_type = df$model_type, best = df$best)
+  df$best_verbose = ifelse(df$best == 0, '', ' - best')
+  df$label = paste(df$model_type, df$best_verbose, sep = '')
+  return(df)
+}
+
+choose_best_func <- function(df){
+  if (1 %in% df$best){
+    return(subset(df$label, df$best == 1))
+  }else{
+    return(df$label[1])
   }
 }

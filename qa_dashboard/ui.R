@@ -47,17 +47,19 @@ ui <- dashboardPage(
                       column(4, uiOutput('relax_base_wiggy'))
                     )
                   ), #baseline model box
-                  box(title = 'Building Information',
+                  box(title = 'Building Information', collapsible = TRUE,
                     fluidRow(
                         column(6, tableOutput('base_binfo_df1')),
                         column(width = 6, tableOutput('base_binfo_df2'))
                     )
                   )#building box
-                ),#boxes 
+                ),#boxes
                 h3("Time Series", align = "center"),
                 plotlyOutput('base_timeseries'),
                 h3("Parameter Model Graph", align = "center"),
                 plotlyOutput('base_param_plot'),
+                br(),
+                uiOutput('model_base_wiggy'),
                 br(),
                 tableOutput('base_param_df'),
                 br(),
@@ -66,7 +68,46 @@ ui <- dashboardPage(
                 tableOutput('base_post_df')
               ), #baseline
               tabItem(tabName = 'retrofit',
-                h3('Retrofit Dashboard')
+                h2('Retrofit Dashboard'),
+                fluidRow(
+                  box(title = "Bema Model Controls", collapsible = TRUE, solidHeader = TRUE, background = 'blue',
+                    fluidRow(
+                      column(6,
+                        uiOutput('elec_model_ord_retro_wiggy'),
+                        uiOutput('elec_r2_retro_wiggy'),
+                        uiOutput('elec_cvrmse_retro_wiggy')
+                      ),#elec
+                      column(6,
+                        uiOutput('fuel_model_ord_retro_wiggy'),
+                        uiOutput('fuel_r2_retro_wiggy'),
+                        uiOutput('fuel_cvrmse_retro_wiggy')
+                      )#fuel
+                    ),
+                    fluidRow(
+                      column(4, uiOutput('main_test_retro_wiggy')),
+                      column(4, uiOutput('all_models_retro_wiggy')),
+                      column(4, uiOutput('relax_retro_wiggy'))
+                    )
+                  ), #baseline model box
+                  box(title = 'Building Information', collapsible = TRUE,
+                    fluidRow(
+                        column(6, tableOutput('retro_binfo_df1')),
+                        column(width = 6, tableOutput('retro_binfo_df2'))
+                    )
+                  )#building box
+                ), #boxes
+                h3("Time Series", align = "center"),
+                plotlyOutput('retro_timeseries'),
+                h3("Parameter Model Graph", align = "center"),
+                plotlyOutput('retro_param_plot'),
+                br(),
+                uiOutput('model_retro_wiggy'),
+                br(),
+                tableOutput('retro_param_df'),
+                br(),
+                tableOutput('retro_stat_df'),
+                br(),
+                tableOutput('retro_post_df')
               )# retrofit
             )
       ) #dashboard body

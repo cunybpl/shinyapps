@@ -124,6 +124,20 @@ shinyServer(function(input, output, session) {
     )
   })
 
+  output$model_base_wiggy <- renderUI({
+    tagList(
+      selectInput('model_base', 'Choose Model to visualize', choices = base_model_df()$label, selected = choose_best_func(base_model_df()), multiple = FALSE,
+  selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  output$model_retro_wiggy <- renderUI({
+    tagList(
+      selectInput('model_retro', 'Choose Model to visualize', choices = retro_model_df()$label, selected = choose_best_func(retro_model_df()), multiple = FALSE,
+  selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
+
 
   ##########################################
   ######## bema model config wiggy #########
@@ -170,7 +184,51 @@ shinyServer(function(input, output, session) {
   })
 
   output$relax_base_wiggy <- renderUI({
-    checkboxInput('relax_base', 'Relax', value = FALSE, width = NULL)
+    checkboxInput('relax_base', 'Frankie says Relax', value = FALSE, width = NULL)
+  })
+
+  ################ Retrofit ################
+
+  output$elec_model_ord_retro_wiggy <- renderUI({
+    tagList(
+      selectizeInput('elec_model_ord_retro', 'Elec Model Ordering', choices = c('5P', '4P', '3PC','2P', '3PH'),
+      selected = c('5P', '4P', '3PC','2P'), multiple = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  output$fuel_model_ord_retro_wiggy <- renderUI({
+    tagList(
+      selectizeInput('fuel_model_ord_retro', 'Fuel Model Ordering', choices = c('3PH', '4P', '5P','2P', '3PC'),
+      selected = c('3PH', '4P', '5P','2P'), multiple = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  output$elec_r2_retro_wiggy <-renderUI({
+    numericInput('elec_r2_retro', 'Elec Rsquared Threshold', value = 0.75, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$fuel_r2_retro_wiggy <-renderUI({
+    numericInput('fuel_r2_retro', 'Fuel Rsquared Threshold', value = 0.75, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$elec_cvrmse_retro_wiggy <-renderUI({
+    numericInput('elec_cvrmse_retro', 'Elec CVRMSE Threshold', value = 0.25, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$fuel_cvrmse_retro_wiggy <-renderUI({
+    numericInput('fuel_cvrmse_retro', 'Fuel CVRMSE Threshold', value = 0.50, min = 0, max = 1, step = 0.01, width = NULL)
+  })
+
+  output$main_test_retro_wiggy <- renderUI({
+    checkboxInput('main_test_retro', 'Bypass Tests', value = FALSE, width = NULL)
+  })
+
+  output$all_models_retro_wiggy <- renderUI({
+    checkboxInput('all_models_retro', 'All Models', value = FALSE, width = NULL)
+  })
+
+  output$relax_retro_wiggy <- renderUI({
+    checkboxInput('relax_retro', 'Frankie says Relax', value = TRUE, width = NULL)
   })
 
   ##########################################
@@ -235,6 +293,7 @@ shinyServer(function(input, output, session) {
     if(length(df)){
       best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
       df = missing_cols_handler(best_cols, df)
+      df = df [, !(colnames(df) %in% 'y_predict')]
     }
     return(df)
   })
@@ -256,15 +315,17 @@ shinyServer(function(input, output, session) {
   })
 
   best_retro <- reactive({
-    retro_batch()$changepoint
+    df = retro_batch()$changepoint
+    df = df [, !(colnames(df) %in% 'y_predict')]
+    return(df)
   })
 
   post_retro <- reactive({
     df = retro_batch()$post
-    if(nrow(df)){
+    if(length(df)){
       df = percent_heat_cool_func(df)
     }
-    df
+    return(df)
   })
 
   ################## energy #################
@@ -277,6 +338,40 @@ shinyServer(function(input, output, session) {
   })
 
   energy_null_flag <- reactive({is.null(util_energy())})
+
+  ################### model ###################
+
+  base_model_df <- reactive({
+    if (is.null(best_base())){
+      return(c())
+    }
+    df = subset(best_base(), best_base()$energy_type == input$energy_type)
+    if (nrow(df)){
+      return(model_label_maker(df))
+    }else{
+      return(c())
+    }
+  })
+
+  retro_model_df <- reactive({
+    if (is.null(best_retro())){
+      return(c())
+    }
+    df = subset(best_retro(), best_retro()$energy_type == input$energy_type)
+    if (nrow(df)){
+      return(model_label_maker(df))
+    }else{
+      return(c())
+    }
+  })
+
+  base_model_type <- reactive({
+    as.character(subset(base_model_df()$model_type, base_model_df()$label == input$model_base))
+  })
+
+  retro_model_type <- reactive({
+    as.character(subset(retro_model_df()$model_type, retro_model_df()$label == input$model_retro))
+  })
 
   #############################################
   ################# Calculator ################
@@ -332,7 +427,7 @@ shinyServer(function(input, output, session) {
   output$base_param_plot <- renderPlotly({
     utility = subset(utility_base(), utility_base()$bdbid == input$bdbid & utility_base()$energy_type == input$energy_type)
     if(length(utility)){
-      best_model = subset(best_base(), best_base()$bdbid == input$bdbid & best_base()$energy_type == input$energy_type)
+      best_model = subset(best_base(), best_base()$bdbid == input$bdbid & best_base()$energy_type == input$energy_type & best_base()$model_type == base_model_type())
       main_param_plot(utility, best_model, b_name())
     }else
     {
@@ -341,11 +436,11 @@ shinyServer(function(input, output, session) {
   })
 
   output$base_param_df <- renderTable({
-      params_table(best_base(), input$bdbid, input$energy_type, 1)
+      params_table(best_base(), input$bdbid, input$energy_type, 1, base_model_type())
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$base_stat_df <- renderTable({
-      stat_table(best_base(), input$bdbid, input$energy_type)
+      stat_table(best_base(), input$bdbid, input$energy_type, base_model_type())
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$base_post_df <- renderTable({
@@ -353,7 +448,7 @@ shinyServer(function(input, output, session) {
     {
       return(NULL)
     }
-    post_output_df_server(post_base(), input$bdbid, input$energy_type, area_info(), input$period)
+    post_output_df_server(post_base(), input$bdbid, input$energy_type, area_info(), input$period, base_model_type())
   }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
 
   #############################################
@@ -399,6 +494,10 @@ shinyServer(function(input, output, session) {
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$retro_post_df <- renderTable({
+    if (!flag_func(post_retro(), input$bdbid, input$energy_type))
+    {
+      return(NULL)
+    }
     post_output_df = post_output_retrofit(post_retro(), input$bdbid, input$energy_type)
     post_output_df = post_col_retrofit(post_output_df, input$period, input$energy_type)
     }, align = 'c', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
