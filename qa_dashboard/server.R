@@ -120,7 +120,7 @@ shinyServer(function(input, output, session) {
 
   output$model_base_wiggy <- renderUI({
     tagList(
-      selectInput('model_base', 'Choose Model to visualize', choices = base_model_df()$label, selected = choose_best_func(base_model_df()), multiple = FALSE,
+      selectInput('model_base', 'Choose (new BEMA) Model to visualize', choices = base_model_df()$label, selected = choose_best_func(base_model_df()), multiple = FALSE,
   selectize = TRUE, width = NULL, size = NULL)
     )
   })
@@ -139,6 +139,12 @@ shinyServer(function(input, output, session) {
     )
   })
 
+  output$model_port_wiggy <- renderUI({
+    tagList(
+      selectInput('model_port', 'Choose (old BEMA) Model to visualize', choices = port_model_df()$label, selected = choose_best_func(port_model_df()), multiple = FALSE,
+  selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
 
   ##########################################
   ######## bema model config wiggy #########
@@ -399,6 +405,16 @@ shinyServer(function(input, output, session) {
     as.character(subset(retro_model_df_post()$model_type, retro_model_df_post()$label == input$model_retro_post))
   })
 
+  ################### port ###################
+
+  port_model_df <- reactive({
+    create_model_df(best_port_base(), input$energy_type)
+  })
+
+  port_model_type <- reactive({
+    as.character(subset(port_model_df()$model_type, port_model_df()$label == input$model_port))
+  })
+
   #############################################
   ################# Calculator ################
   #############################################
@@ -587,7 +603,7 @@ shinyServer(function(input, output, session) {
   output$port_base_param_plot <- renderPlotly({
     utility = subset(utility_port_base(), utility_port_base()$bdbid == input$bdbid & utility_port_base()$energy_type == input$energy_type)
     if(length(utility)){
-      best_model = subset(best_port_base(), best_port_base()$bdbid == input$bdbid & best_port_base()$energy_type == input$energy_type & best_port_base()$model_type == base_model_type())
+      best_model = subset(best_port_base(), best_port_base()$bdbid == input$bdbid & best_port_base()$energy_type == input$energy_type & best_port_base()$model_type == port_model_type())
       main_param_plot(utility, best_model, b_name())
     }else
     {
@@ -596,11 +612,11 @@ shinyServer(function(input, output, session) {
   })
 
   output$port_base_param_df <- renderTable({
-      params_table(best_port_base(), input$bdbid, input$energy_type, 1, base_model_type())
+      params_table(best_port_base(), input$bdbid, input$energy_type, 1, port_model_type())
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$port_base_stat_df <- renderTable({
-      stat_table(best_port_base(), input$bdbid, input$energy_type, base_model_type())
+      stat_table(best_port_base(), input$bdbid, input$energy_type, port_model_type())
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
 
   output$port_base_post_df <- renderTable({

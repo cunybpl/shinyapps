@@ -416,7 +416,7 @@ stat_table <- function(best_model, bdbid_n, energy_n, model_type_n = NULL)
       best_model = subset(best_model, best_model$model_type == as.character(model_type_n))
     }
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
-    df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'period')]
+    df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'period', 'best', 'main_test', 'data_pop_test', 'shape_test', 't_stat_test')]
   }else
   {
     df = data.frame(NULL)

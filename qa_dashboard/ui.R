@@ -66,7 +66,10 @@ ui <- dashboardPage(
                   )#end of plot box
                 ),#parameter plots for base and port_base
                 br(),
-                uiOutput('model_base_wiggy'),
+                fluidRow(
+                  column(6, uiOutput('model_base_wiggy')),
+                  column(6, uiOutput('model_port_wiggy'))
+                ),
                 br(),
                 h4('Baseline Model Results'),
                 tableOutput('base_param_df'),
