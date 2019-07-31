@@ -242,7 +242,7 @@ post_output_retrofit <- function(post_df,  bdbid_n, energy)
 
   if (flag)
   {
-    post_df = post_df[, c('model_type','prepost', 'heat_load', 'cool_load', 'total_consumption', 'percent_cooling', 'percent_heating', 'percent_baseload', 'cooling_change_point', 'heating_change_point')]
+    post_df = post_df[, c('model_type','prepost', 'heat_load', 'cool_load', 'total_consumption', 'cooling_change_point', 'heating_change_point')]
     if (length(post_df$prepost) == 2)
     {
       post_df$prepost = ifelse(post_df$prepost == 1, 'pre', 'post')
@@ -278,9 +278,9 @@ post_output <- function(post_df,  bdbid_n, energy, model_type_n = NULL)
 
   if (flag)
   {
-    post_df = post_df[, c('model_type', 'heat_load', 'cool_load', 'total_consumption', 'percent_cooling', 'percent_heating', 'percent_baseload', 'baseload', 'cooling_change_point', 'heating_change_point')]
+    post_df = post_df[, c('model_type', 'heat_load', 'cool_load', 'total_consumption', 'baseload', 'cooling_change_point', 'heating_change_point')]
     post_df = heat_cold_point(post_df, energy)
-    post_df$baseload = post_df$total_consumption*post_df$percent_baseload
+    #post_df$baseload = post_df$total_consumption*post_df$percent_baseload
     post_df = t(post_df)
 
   }else
@@ -340,14 +340,14 @@ post_col <- function(post_df, n, energy)
   {
     post_df = rbind(post_df, n)
     colnames(post_df) = c('Unretrofit')
-    rownames(post_df) = c('Model Type','Estimated Heating', 'Estimated Cooling', 'Total Consumption', 'Percent Cooling', 'Percent Heating', 'Percent Baseload', 'Baseload','Cooling Change-point', 'Heating Change-point', 'Total Points Observed')
+    rownames(post_df) = c('Model Type','Estimated Heating', 'Estimated Cooling', 'Total Consumption', 'Baseload','Cooling Change-point', 'Heating Change-point', 'Total Points Observed')
     post_df = data.frame(post_df)
     if (energy == 'Elec')
     {
-      post_df$Units = c('model_type', 'kWh/sqft/day', 'kWh/sqft/day', 'kWh/sqft', '%', '%', '%', 'kWh/sqft','F', 'F', 'Months')
+      post_df$Units = c('model_type', 'kWh/sqft/day', 'kWh/sqft/day', 'kWh/sqft', 'kWh/sqft','F', 'F', 'Months')
     }else
     {
-      post_df$Units = c('model_type', 'BTU/sqft/day', 'BTU/sqft/day', 'BTU/sqft', '%', '%', '%', 'BTU/sqft','F', 'F', 'Months')
+      post_df$Units = c('model_type', 'BTU/sqft/day', 'BTU/sqft/day', 'BTU/sqft','BTU/sqft','F', 'F', 'Months')
     }
   }else
   {
@@ -363,14 +363,14 @@ post_col_retrofit <- function(post_df, n, energy)
   if (length(post_df))
   {
     post_df = rbind(post_df, n)
-    rownames(post_df) = c('Model Type','Estimated Heating', 'Estimated Cooling', 'Total Consumption', 'Percent Cooling', 'Percent Heating', 'Percent Baseload', 'Cooling Change-Point', 'Heating Change-Point', 'Total Points Observed')
+    rownames(post_df) = c('Model Type','Estimated Heating', 'Estimated Cooling', 'Total Consumption', 'Cooling Change-Point', 'Heating Change-Point', 'Total Points Observed')
     post_df = data.frame(post_df)
     if (energy == 'Elec')
     {
-     post_df$Units = c('model_type', 'kWh', 'kWh', 'kWh', '%', '%', '%', 'F', 'F', 'Months')
+     post_df$Units = c('model_type', 'kWh', 'kWh', 'kWh', 'F', 'F', 'Months')
     }else
     {
-     post_df$Units = c('model_type', 'BTU', 'BTU', 'BTU', '%', '%', '%', 'F', 'F', 'Months')
+     post_df$Units = c('model_type', 'BTU', 'BTU', 'BTU', 'F', 'F', 'Months')
     }
   }else
   {
@@ -413,10 +413,8 @@ stat_table <- function(best_model, bdbid_n, energy_n, model_type_n = NULL)
   if (flag_func(best_model, bdbid_n, energy_n))
   {
     if(!is.null(model_type_n)){
-      print('it went in')
       best_model = subset(best_model, best_model$model_type == as.character(model_type_n))
     }
-    print(nrow(best_model))
     df = subset(best_model, bdbid == bdbid_n & energy_type == energy_n)
     df = df[ ,c('prepost', 'model_type', 'nac', 'r2', 'cv_rmse', 'heat_months', 'cool_months', 'period')]
   }else
@@ -930,13 +928,13 @@ post_output_df_server <- function(post_df, bdbid_n, energy_n, area_info, n, mode
     post_output_df = post_output(post_df, bdbid_n, energy_n, model_type_n)
     post_output_df = post_col(post_output_df, n, energy_n)
 
-    if(area_info$flag_area)
+    if(FALSE) #area_info$flag_area
     {
       post_output_df = post_gross(post_output_df, area_info$area, energy_n)
     }else
     {
       post_output_df$Unretrofit = as.character(post_output_df$Unretrofit)
-      post_output_df$Unretrofit[2:11] = as.character(round(as.numeric(post_output_df$Unretrofit[2:11]), 2))
+      post_output_df$Unretrofit[2:8] = as.character(round(as.numeric(post_output_df$Unretrofit[2:8]), 2))
       post_output_df$Unretrofit = format(post_output_df$Unretrofit, na.encode = TRUE, justify = 'none')
       post_output_df$Unretrofit = prettyNum(post_output_df$Unretrofit, big.mark = ",", format = 'f')
     }
@@ -1057,7 +1055,6 @@ chunky_paginator <- function(url = '', bdbid_vec = c(), query_params = list(), c
 get_batch_result <- function(url, query){
   delay_n = 0.1
   task_id = post_request(url, payload = query)
-  print(task_id)
   for (i in c(1:20)){
     res = fetch_request(paste('/bema/results/', task_id$task_id, sep =''))
     if (res$status == 'SUCCESS'){
@@ -1082,6 +1079,18 @@ model_label_maker <- function(df){
   df$best_verbose = ifelse(df$best == 0, '', ' - best')
   df$label = paste(df$model_type, df$best_verbose, sep = '')
   return(df)
+}
+
+create_model_df <- function(df, energy, prepost_n = 1){
+  if (is.null(df)){
+    return(c())
+  }
+  df = subset(df, df$energy_type == energy & df$prepost == prepost_n)
+  if (nrow(df)){
+    return(model_label_maker(df))
+  }
+
+  return(c())
 }
 
 choose_best_func <- function(df){

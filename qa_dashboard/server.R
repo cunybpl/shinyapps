@@ -89,7 +89,7 @@ shinyServer(function(input, output, session) {
     })
 
   output$sqft_wiggy <- renderUI({
-    checkboxInput('sqft_fl', 'Normalized by sqft', value = FALSE, width = NULL)
+    checkboxInput('sqft_fl', 'Normalized by sqft', value = TRUE, width = NULL)
     })
 
   output$tar_date_wiggy <- renderUI({
@@ -125,9 +125,16 @@ shinyServer(function(input, output, session) {
     )
   })
 
-  output$model_retro_wiggy <- renderUI({
+  output$model_retro_wiggy_pre <- renderUI({
     tagList(
-      selectInput('model_retro', 'Choose Model to visualize', choices = retro_model_df()$label, selected = choose_best_func(retro_model_df()), multiple = FALSE,
+      selectInput('model_retro_pre', 'Choose Pre Model to visualize', choices = retro_model_df_pre()$label, selected = choose_best_func(retro_model_df_pre()), multiple = FALSE,
+  selectize = TRUE, width = NULL, size = NULL)
+    )
+  })
+
+  output$model_retro_wiggy_post <- renderUI({
+    tagList(
+      selectInput('model_retro_post', 'Choose Post Model to visualize', choices = retro_model_df_post()$label, selected = choose_best_func(retro_model_df_post()), multiple = FALSE,
   selectize = TRUE, width = NULL, size = NULL)
     )
   })
@@ -239,7 +246,13 @@ shinyServer(function(input, output, session) {
                           })
 
   retro_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
-                          retrofit_start_date = input$start_date, retrofit_end_date = input$end_date)})
+                          retrofit_start_date = input$start_date, retrofit_end_date = input$end_date,
+                          relax = input$relax_retro, elec_model_ordering = char_to_vec(input$elec_model_ord_retro),
+                          fuel_model_ordering = char_to_vec(input$fuel_model_ord_retro),
+                          elec_r2_threshold = input$elec_r2_retro, elec_cvrmse_threshold = input$elec_cvrmse_retro,
+                          fuel_r2_threshold = input$fuel_r2_retro, fuel_cvrmse_threshold = input$fuel_cvrmse_retro,
+                          all_models = input$all_models_retro, ignore_main_test = input$main_test_retro)
+                          })
 
   ##########################################
   ####### GATHER AROUND, DATA IS HERE ######
@@ -296,7 +309,7 @@ shinyServer(function(input, output, session) {
     df = baseline_batch()$post
     if(length(df))
     {
-      post_cols = c("sitename", 'period', 'percent_cooling', 'percent_heating', 'percent_baseload', "session_id")
+      post_cols = c("sitename", 'period', "session_id")
       df = missing_cols_handler(post_cols, df)
     }
     return(df)
@@ -308,19 +321,46 @@ shinyServer(function(input, output, session) {
     retro_batch()$utility
   })
 
-  best_retro <- reactive({
+  best_retro_org <- reactive({
     df = retro_batch()$changepoint
-    df = df [, !(colnames(df) %in% 'y_predict')]
+    if(length(df)){
+      best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
+      df = missing_cols_handler(best_cols, df)
+      df = df [, !(colnames(df) %in% 'y_predict')]
+    }
+    return(df)
+  })
+
+  best_retro <- reactive({
+    if (length(best_retro_org())){
+      pre_df = subset(best_retro_org(), best_retro_org()$prepost == 1 & best_retro_org()$model_type == retro_model_type_pre())
+      post_df = subset(best_retro_org(), best_retro_org()$prepost == 3 & best_retro_org()$model_type == retro_model_type_post())
+      return(rbind(pre_df, post_df))
+    }
+    return(NULL)
+  })
+
+  post_retro_org <- reactive({
+    df = retro_batch()$post
+    if(length(df))
+    {
+      post_cols = c("sitename", 'period', "session_id")
+      df = missing_cols_handler(post_cols, df)
+    }
     return(df)
   })
 
   post_retro <- reactive({
-    df = retro_batch()$post
-    if(length(df)){
-      df = percent_heat_cool_func(df)
+    if(length(post_retro_org())){
+      pre_df = subset(post_retro_org(), post_retro_org()$prepost == 1 & post_retro_org()$model_type == retro_model_type_pre())
+      post_df = subset(post_retro_org(), post_retro_org()$prepost == 3 & post_retro_org()$model_type == retro_model_type_post())
+      return(rbind(pre_df, post_df))
     }
-    return(df)
+    return(NULL)
   })
+
+
+
 
   ################## energy #################
 
@@ -336,35 +376,27 @@ shinyServer(function(input, output, session) {
   ################### model ###################
 
   base_model_df <- reactive({
-    if (is.null(best_base())){
-      return(c())
-    }
-    df = subset(best_base(), best_base()$energy_type == input$energy_type)
-    if (nrow(df)){
-      return(model_label_maker(df))
-    }else{
-      return(c())
-    }
+    create_model_df(best_base(), input$energy_type)
   })
 
-  retro_model_df <- reactive({
-    if (is.null(best_retro())){
-      return(c())
-    }
-    df = subset(best_retro(), best_retro()$energy_type == input$energy_type)
-    if (nrow(df)){
-      return(model_label_maker(df))
-    }else{
-      return(c())
-    }
+  retro_model_df_pre <- reactive({
+    create_model_df(best_retro_org(), input$energy_type)
+  })
+
+  retro_model_df_post <- reactive({
+    create_model_df(best_retro_org(), input$energy_type, 3)
   })
 
   base_model_type <- reactive({
     as.character(subset(base_model_df()$model_type, base_model_df()$label == input$model_base))
   })
 
-  retro_model_type <- reactive({
-    as.character(subset(retro_model_df()$model_type, retro_model_df()$label == input$model_retro))
+  retro_model_type_pre <- reactive({
+    as.character(subset(retro_model_df_pre()$model_type, retro_model_df_pre()$label == input$model_retro_pre))
+  })
+
+  retro_model_type_post <- reactive({
+    as.character(subset(retro_model_df_post()$model_type, retro_model_df_post()$label == input$model_retro_post))
   })
 
   #############################################
@@ -570,6 +602,14 @@ shinyServer(function(input, output, session) {
   output$port_base_stat_df <- renderTable({
       stat_table(best_port_base(), input$bdbid, input$energy_type, base_model_type())
   }, align = 'l', rownames = FALSE, colnames = TRUE, width = "auto", digits = 7)
+
+  output$port_base_post_df <- renderTable({
+    if (!flag_func(post_port_base(), input$bdbid, input$energy_type))
+    {
+      return(NULL)
+    }
+    post_output_df_server(post_port_base(), input$bdbid, input$energy_type, area_info(), input$period)
+  }, align = 'l', rownames = TRUE, colnames = TRUE, width = "auto", digits = 7)
 
 
 })

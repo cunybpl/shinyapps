@@ -5,6 +5,6 @@ account: cunybpl
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1010978
-bundleId: 2210706
+bundleId: 2277311
 url: https://cunybpl.shinyapps.io/qa_dashboard/
-when: 1562594151.1804
+when: 1564502987.3966

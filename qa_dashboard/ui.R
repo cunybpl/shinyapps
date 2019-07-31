@@ -77,8 +77,16 @@ ui <- dashboardPage(
                 br(),
                 tableOutput('port_base_stat_df'),
                 br(),
-                h4('Baseline Post Model'),
-                tableOutput('base_post_df')
+                fluidRow(
+                  column(6,
+                    h4('Baseline Post Model'),
+                    tableOutput('base_post_df')
+                  ),
+                  column(6,
+                    h4('Portfolio Post Model'),
+                    tableOutput('port_base_post_df')
+                  )
+                )# end of post
               ), #baseline
               tabItem(tabName = 'retrofit',
                 h2('Retrofit Dashboard'),
@@ -114,7 +122,10 @@ ui <- dashboardPage(
                 h3("Parameter Model Graph", align = "center"),
                 plotlyOutput('retro_param_plot'),
                 br(),
-                uiOutput('model_retro_wiggy'),
+                fluidRow(
+                  column(6, uiOutput('model_retro_wiggy_pre')),
+                  column(6, uiOutput('model_retro_wiggy_post'))
+                ),
                 br(),
                 tableOutput('retro_param_df'),
                 br(),
