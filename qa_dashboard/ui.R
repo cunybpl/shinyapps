@@ -1,4 +1,5 @@
 library(shinydashboard)
+library(markdown)
 
 ui <- dashboardPage(
           dashboardHeader(title = 'QA Dashboard'),

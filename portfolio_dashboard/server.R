@@ -36,9 +36,6 @@ shinyServer(function(input, output, session) {
           column(width = 8,
           mainPanel(width = 12,
             tabsetPanel(
-              tabPanel("App Info",
-                h5('To get started, Utility CSV must be uploaded.')
-              ),
               tabPanel('Building Portfolio',
                 br(),
                 plotlyOutput('b_comp_plot'),
@@ -415,7 +412,9 @@ shinyServer(function(input, output, session) {
     })
 
   lean_df <- reactive({
-    df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(bdbid = bdbid_n(),fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
+    #df = paginator_fetch_request('portfolios/bestmodel-loads-sensitivity-lean-rank/', query_params=list(bdbid = bdbid_n(),fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000))$result
+    query_params=list(fiscal_year = input$fiscal_year, lean_category = lean_cat(), page_size = 1000)
+    df = chunky_paginator(url = 'portfolios/bestmodel-loads-sensitivity-lean-rank/', bdbid_vec = b_df0()$bdbid, query_params, chunky_vec())
     if(length(df) == 0 | null_drop())
     {
       return(NULL)
@@ -755,11 +754,11 @@ shinyServer(function(input, output, session) {
 
   output$lean_elec_table <- renderDataTable({
     lean_df_elec()$df
-    }, rownames = FALSE)
+  }, rownames = FALSE)
 
   output$lean_fuel_table <- renderDataTable({
     lean_df_fuel()$df
-    }, rownames = FALSE)
+  }, rownames = FALSE)
 
   ##########################################
   ############### Models ###################

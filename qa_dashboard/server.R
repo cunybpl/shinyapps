@@ -2,6 +2,7 @@ library(shiny)
 library(bplclientR)
 library(plotly)
 library(DT)
+library(markdown)
 shinyServer(function(input, output, session) {
 #### UI code --------------------------------------------------------------
 
@@ -18,7 +19,12 @@ shinyServer(function(input, output, session) {
       )
     )
   }else{
-    textOutput('log_in_page_text')
+    fluidPage(
+      textOutput('log_in_page_text'),
+      br(),
+      h4('Help'),
+      includeMarkdown('help.md')
+    )
   }
   })
 
