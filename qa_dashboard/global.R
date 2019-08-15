@@ -86,8 +86,8 @@ plot_model <- function(x, y, energy, pre_key, p1 = plot_ly(), retrofit = FALSE)
 
 plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), retrofit = FALSE, b_name = '')
 {
-  util_act = subset(df, df$estimated == 1)
-  util_est = subset(df, df$estimated == 0)
+  util_act = subset(df, df$estimated == 0)
+  util_est = subset(df, df$estimated == 1)
 
   switch(as.character(pre_key),
     "1" = {
@@ -115,7 +115,7 @@ plot_point <- function(df, energy, pre_key, model_fig = plot_ly(), retrofit = FA
 
 #just pass necessary frames, handle both baseline and retrofit, unique values of energy and bdbid; handle no model, just pass empty frame
 main_param_plot <- function(utility, best_model, b_name = ''){
-  best_row = as.character(nrow(best_model))
+  best_row = ifelse(is.null(best_model), as.character(0) ,as.character(nrow(best_model)))
   switch(best_row,
     "0" = { #only points
       energy = unique(utility$energy_type)

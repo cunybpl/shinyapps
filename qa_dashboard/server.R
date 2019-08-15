@@ -160,15 +160,15 @@ shinyServer(function(input, output, session) {
 
   output$elec_model_ord_base_wiggy <- renderUI({
     tagList(
-      selectizeInput('elec_model_ord_base', 'Elec Model Ordering', choices = c('5P', '4P', '3PC','2P', '3PH'),
-      selected = c('5P', '4P', '3PC','2P'), multiple = TRUE, width = NULL, size = NULL)
+      selectizeInput('elec_model_ord_base', 'Elec Model Ordering', choices = c('3PC', '3PH', '4P', '5P', '2P'),
+      selected = c('3PH', '3PC', '4P', '5P', '2P'), multiple = TRUE, width = NULL, size = NULL)
     )
   })
 
   output$fuel_model_ord_base_wiggy <- renderUI({
     tagList(
-      selectizeInput('fuel_model_ord_base', 'Fuel Model Ordering', choices = c('3PH', '4P', '5P','2P', '3PC'),
-      selected = c('3PH', '4P', '5P','2P'), multiple = TRUE, width = NULL, size = NULL)
+      selectizeInput('fuel_model_ord_base', 'Fuel Model Ordering', choices = c('3PH', '3PC', '4P', '5P', '2P'),
+      selected = c('3PH', '3PC', '4P', '5P', '2P'), multiple = TRUE, width = NULL, size = NULL)
     )
   })
 
@@ -200,19 +200,23 @@ shinyServer(function(input, output, session) {
     checkboxInput('relax_base', 'Relax', value = FALSE, width = NULL)
   })
 
+  output$nac_base_wiggy <- renderUI({
+    checkboxInput('nac_base', 'Include NAC', value = FALSE, width = NULL)
+  })
+
   ################ Retrofit ################
 
   output$elec_model_ord_retro_wiggy <- renderUI({
     tagList(
-      selectizeInput('elec_model_ord_retro', 'Elec Model Ordering', choices = c('5P', '4P', '3PC','2P', '3PH'),
-      selected = c('5P', '4P', '3PC','2P'), multiple = TRUE, width = NULL, size = NULL)
+      selectizeInput('elec_model_ord_retro', 'Elec Model Ordering', choices = c('3PC', '3PH', '4P', '5P', '2P'),
+      selected = c('3PC', '3PH', '4P', '5P', '2P'), multiple = TRUE, width = NULL, size = NULL)
     )
   })
 
   output$fuel_model_ord_retro_wiggy <- renderUI({
     tagList(
-      selectizeInput('fuel_model_ord_retro', 'Fuel Model Ordering', choices = c('3PH', '4P', '5P','2P', '3PC'),
-      selected = c('3PH', '4P', '5P','2P'), multiple = TRUE, width = NULL, size = NULL)
+      selectizeInput('fuel_model_ord_retro', 'Fuel Model Ordering', choices = c('3PH', '3PC', '4P', '5P', '2P'),
+      selected = c('3PH', '3PC', '4P', '5P', '2P'), multiple = TRUE, width = NULL, size = NULL)
     )
   })
 
@@ -244,6 +248,10 @@ shinyServer(function(input, output, session) {
     checkboxInput('relax_retro', 'Relax', value = TRUE, width = NULL)
   })
 
+  output$nac_retro_wiggy <- renderUI({
+    checkboxInput('nac_retro', 'Include nac', value = FALSE, width = NULL)
+  })
+
   ##########################################
   ############# Prepare Queries ############
   ##########################################
@@ -254,7 +262,8 @@ shinyServer(function(input, output, session) {
                           fuel_model_ordering = char_to_vec(input$fuel_model_ord_base),
                           elec_r2_threshold = input$elec_r2_base, elec_cvrmse_threshold = input$elec_cvrmse_base,
                           fuel_r2_threshold = input$fuel_r2_base, fuel_cvrmse_threshold = input$fuel_cvrmse_base,
-                          all_models = input$all_models_base, ignore_main_test = input$main_test_base)
+                          all_models = input$all_models_base, ignore_main_test = input$main_test_base,
+                          include_nac = input$nac_base)
                           })
 
   retro_query <- reactive({list(bdbid = input$bdbid, period = input$period, no_sqft=!input$sqft_fl,
@@ -263,7 +272,8 @@ shinyServer(function(input, output, session) {
                           fuel_model_ordering = char_to_vec(input$fuel_model_ord_retro),
                           elec_r2_threshold = input$elec_r2_retro, elec_cvrmse_threshold = input$elec_cvrmse_retro,
                           fuel_r2_threshold = input$fuel_r2_retro, fuel_cvrmse_threshold = input$fuel_cvrmse_retro,
-                          all_models = input$all_models_retro, ignore_main_test = input$main_test_retro)
+                          all_models = input$all_models_retro, ignore_main_test = input$main_test_retro,
+                          include_nac = input$nac_retro)
                           })
 
   ##########################################
@@ -304,15 +314,23 @@ shinyServer(function(input, output, session) {
   ################# Unretrofit ################
 
   utility_base <- reactive({
-    baseline_batch()$utility
+      df = baseline_batch()$utility
+      if (length(df)){
+        colnames(df)[colnames(df) == 'id'] <- 'bdbid'
+      }
+      return(df)
   })
 
   best_base <- reactive({
     df = baseline_batch()$changepoint
     if(length(df)){
+      colnames(df)[colnames(df) == 'id'] <- 'bdbid'
       best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
       df = missing_cols_handler(best_cols, df)
       df = df [, !(colnames(df) %in% 'y_predict')]
+    }else{
+      print('bdfdsfsdf')
+      df = NULL
     }
     return(df)
   })
@@ -321,8 +339,11 @@ shinyServer(function(input, output, session) {
     df = baseline_batch()$post
     if(length(df))
     {
+      colnames(df)[colnames(df) == 'id'] <- 'bdbid'
       post_cols = c("sitename", 'period', "session_id")
       df = missing_cols_handler(post_cols, df)
+    }else{
+      df = NULL
     }
     return(df)
   })
@@ -339,6 +360,8 @@ shinyServer(function(input, output, session) {
       best_cols = c("fiscal_year", "period", "tmin", "tmax", "n", "session_id", "nac")
       df = missing_cols_handler(best_cols, df)
       df = df [, !(colnames(df) %in% 'y_predict')]
+    }else{
+      df = NULL
     }
     return(df)
   })
@@ -358,6 +381,8 @@ shinyServer(function(input, output, session) {
     {
       post_cols = c("sitename", 'period', "session_id")
       df = missing_cols_handler(post_cols, df)
+    }else{
+      df = NULL
     }
     return(df)
   })
@@ -474,7 +499,7 @@ shinyServer(function(input, output, session) {
 
   output$base_param_plot <- renderPlotly({
     utility = subset(utility_base(), utility_base()$bdbid == input$bdbid & utility_base()$energy_type == input$energy_type)
-    if(length(utility)){
+    if(length(utility) & nrow(utility)){
       best_model = subset(best_base(), best_base()$bdbid == input$bdbid & best_base()$energy_type == input$energy_type & best_base()$model_type == base_model_type())
       main_param_plot(utility, best_model, b_name())
     }else

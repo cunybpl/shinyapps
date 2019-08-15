@@ -42,9 +42,10 @@ ui <- dashboardPage(
                       )#fuel
                     ),
                     fluidRow(
-                      column(4, uiOutput('main_test_base_wiggy')),
-                      column(4, uiOutput('all_models_base_wiggy')),
-                      column(4, uiOutput('relax_base_wiggy'))
+                      column(3, uiOutput('main_test_base_wiggy')),
+                      column(3, uiOutput('all_models_base_wiggy')),
+                      column(3, uiOutput('relax_base_wiggy')),
+                      column(3, uiOutput('nac_base_wiggy'))
                     )
                   ), #baseline model box
                   box(title = 'Building Information', collapsible = TRUE,
@@ -109,9 +110,10 @@ ui <- dashboardPage(
                       )#fuel
                     ),
                     fluidRow(
-                      column(4, uiOutput('main_test_retro_wiggy')),
-                      column(4, uiOutput('all_models_retro_wiggy')),
-                      column(4, uiOutput('relax_retro_wiggy'))
+                      column(3, uiOutput('main_test_retro_wiggy')),
+                      column(3, uiOutput('all_models_retro_wiggy')),
+                      column(3, uiOutput('relax_retro_wiggy')),
+                      column(3, uiOutput('nac_retro_wiggy'))
                     )
                   ), #baseline model box
                   box(title = 'Building Information', collapsible = TRUE,
